@@ -1,0 +1,2949 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>ניהול תיקים משפטיים</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;ניהול תיקים משפטיים&quot;,&quot;short_name&quot;:&quot;משרד עו״ד&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;%230d1018&quot;,&quot;theme_color&quot;:&quot;%23c9a84c&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/2696.png&quot;,&quot;sizes&quot;:&quot;72x72&quot;,&quot;type&quot;:&quot;image/png&quot;}]}">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="משרד עו״ד">
+<meta name="theme-color" content="#3b82f6">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f2ede4;
+  --surface: #fdf9f3;
+  --surface2: #ebe5d8;
+  --border: #d6cdb8;
+  --accent: #1a3a6e;
+  --accent2: #1e4fa0;
+  --text: #1a1a2e;
+  --text2: #3d4a6b;
+  --text3: #8a8fa8;
+  --danger: #b83040;
+  --success: #1e6e40;
+  --info: #1a4a8a;
+  --warn: #a05010;
+  --sidebar-w: 230px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{
+  font-family:'Heebo',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  font-size:14px;
+  overflow:hidden;
+  height:100vh;
+}
+
+/* ─── SIDEBAR ─── */
+#sidebar{
+  width:var(--sidebar-w);
+  background:#071223;
+  border-left:1px solid #050f1e;
+  display:flex;flex-direction:column;
+  height:100vh;position:fixed;right:0;top:0;z-index:100;
+  transition:transform .25s ease;
+}
+.logo{padding:22px 20px 18px;border-bottom:1px solid rgba(255,255,255,.08);}
+.logo-mark{font-size:22px;margin-bottom:4px;}
+.logo-title{font-size:12px;font-weight:800;color:#60a5fa;letter-spacing:.12em;text-transform:uppercase;}
+.logo-sub{font-size:11px;color:rgba(255,255,255,.35);margin-top:2px;}
+.nav{flex:1;padding:10px 0;overflow-y:auto;}
+.nav-section{padding:10px 18px 4px;font-size:10px;font-weight:700;color:rgba(255,255,255,.28);letter-spacing:.12em;text-transform:uppercase;}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 18px;cursor:pointer;
+  color:rgba(255,255,255,.55);font-size:13px;font-weight:500;
+  transition:all .15s;position:relative;
+}
+.nav-item:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.9);}
+.nav-item.active{background:rgba(96,165,250,.13);color:#93c5fd;}
+.nav-item.active::before{
+  content:'';position:absolute;right:0;top:4px;bottom:4px;
+  width:3px;background:linear-gradient(to bottom,#60a5fa,#3b82f6);border-radius:2px 0 0 2px;
+}
+.nav-icon{width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}.nav-icon svg{width:17px;height:17px;}
+.nbadge{
+  margin-right:auto;background:#b83a4a;color:#fff;
+  font-size:10px;font-weight:700;border-radius:10px;
+  padding:1px 6px;min-width:18px;text-align:center;
+}
+.sidebar-footer{
+  padding:14px 16px;border-top:1px solid rgba(255,255,255,.08);
+  display:flex;gap:8px;
+}
+.sfbtn{
+  flex:1;padding:8px 6px;border:1px solid rgba(255,255,255,.15);
+  background:transparent;color:rgba(255,255,255,.5);border-radius:7px;
+  cursor:pointer;font-size:11px;font-family:'Heebo',sans-serif;
+  font-weight:600;transition:all .15s;
+}
+.sfbtn:hover{border-color:#60a5fa;color:#93c5fd;}
+
+/* ─── MAIN ─── */
+#main{
+  margin-right:var(--sidebar-w);flex:1;
+  height:100vh;overflow-y:auto;display:flex;flex-direction:column;
+}
+.topbar{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:14px 28px;display:flex;align-items:center;
+  justify-content:space-between;position:sticky;top:0;z-index:50;
+}
+.page-title{font-size:17px;font-weight:700;}
+.page-sub{font-size:11px;color:var(--text3);margin-top:1px;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+
+/* ─── MOBILE TOPBAR ─── */
+#mob-topbar{
+  display:none;background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:12px 16px;
+  align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:50;
+}
+.mob-title{font-size:16px;font-weight:700;}
+.mob-actions{display:flex;gap:8px;align-items:center;}
+
+/* ─── MOBILE NAV ─── */
+#mob-nav{
+  display:none;position:fixed;bottom:0;left:0;right:0;
+  background:var(--surface);border-top:1px solid var(--border);
+  z-index:200;padding-bottom:var(--safe-bottom);
+  box-shadow:0 -2px 12px rgba(0,0,0,.06);
+}
+.mob-nav-row{display:flex;justify-content:space-around;}
+.mni{
+  display:flex;flex-direction:column;align-items:center;
+  gap:2px;padding:8px 6px;cursor:pointer;
+  color:var(--text3);font-size:10px;font-weight:600;
+  transition:all .15s;flex:1;position:relative;
+}
+.mni-icon{width:22px;height:22px;display:flex;align-items:center;justify-content:center;}.mni-icon svg{width:20px;height:20px;}
+.mni.active{color:var(--accent);}
+.mni-badge{
+  position:absolute;top:4px;right:calc(50% - 16px);
+  background:var(--danger);color:#fff;
+  font-size:9px;font-weight:700;border-radius:8px;padding:1px 4px;
+}
+
+/* ─── BUTTONS ─── */
+.btn{
+  padding:8px 16px;border-radius:8px;border:none;cursor:pointer;
+  font-family:'Heebo',sans-serif;font-weight:600;font-size:13px;
+  transition:all .15s;display:inline-flex;align-items:center;gap:6px;
+  white-space:nowrap;
+}
+.btn-primary{background:var(--accent);color:#000;}
+.btn-primary:hover{background:var(--accent2);}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border);}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+.btn-success{background:rgba(76,175,130,.15);color:var(--success);border:1px solid rgba(76,175,130,.3);}
+.btn-danger-soft{background:rgba(224,90,106,.12);color:var(--danger);border:1px solid rgba(224,90,106,.25);}
+.btn-sm{padding:5px 11px;font-size:12px;}
+.btn-xs{padding:3px 8px;font-size:11px;border-radius:5px;}
+
+/* ─── SEARCH ─── */
+.search-wrap{position:relative;}
+.search-wrap input{
+  padding:8px 34px 8px 12px;background:var(--bg);
+  border:1px solid var(--border);border-radius:8px;
+  color:var(--text);font-family:'Heebo',sans-serif;font-size:13px;
+  outline:none;transition:border .15s;width:260px;direction:rtl;
+}
+.search-wrap input:focus{border-color:var(--accent);}
+.search-icon{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:14px;}
+
+/* ─── PAGE CONTENT ─── */
+.page-content{padding:24px 28px;}
+.view{display:none;}
+.view.active{display:block;}
+
+/* ─── STATS ─── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;padding:18px 20px;
+  display:flex;align-items:center;gap:16px;
+  box-shadow:0 1px 4px rgba(0,0,0,.05);
+  transition:box-shadow .2s, transform .2s;
+}
+.stat-card:hover{box-shadow:0 4px 16px rgba(26,58,110,.1);transform:translateY(-1px);}
+.stat-icon-wrap{
+  width:46px;height:46px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.sc-i-navy{background:rgba(26,58,110,.12);color:#1a3a6e;}
+.sc-i-blue{background:rgba(30,79,160,.12);color:#1e4fa0;}
+.sc-i-amber{background:rgba(160,80,16,.1);color:#a05010;}
+.sc-i-emerald{background:rgba(30,110,64,.1);color:#1e6e40;}
+.stat-body{flex:1;}
+.stat-label{font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-top:3px;}
+.stat-value{font-size:26px;font-weight:800;line-height:1;}
+.sc-navy .stat-value{color:#1a3a6e;}
+.sc-blue .stat-value{color:#1e4fa0;}
+.sc-amber .stat-value{color:#a05010;}
+.sc-emerald .stat-value{color:#1e6e40;}
+
+/* ─── CARD ─── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.card-title{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+
+/* ─── TABLE ─── */
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+th{
+  text-align:right;padding:9px 14px;
+  font-size:10px;font-weight:700;color:var(--text3);
+  text-transform:uppercase;letter-spacing:.06em;
+  border-bottom:1px solid var(--border);white-space:nowrap;
+}
+td{padding:11px 14px;border-bottom:1px solid rgba(37,45,69,.6);font-size:13px;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,.015);}
+
+/* ─── TAGS ─── */
+.tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;}
+.tag-active{background:rgba(76,175,130,.18);color:var(--success);}
+.tag-closed{background:rgba(74,82,112,.3);color:var(--text3);}
+.tag-pending{background:rgba(240,160,90,.18);color:var(--warn);}
+.tag-urgent{background:rgba(224,90,106,.18);color:var(--danger);}
+.tag-paid{background:rgba(76,175,130,.18);color:var(--success);}
+.tag-unpaid{background:rgba(224,90,106,.18);color:var(--danger);}
+.tag-partial{background:rgba(240,160,90,.18);color:var(--warn);}
+
+/* ─── ACTION ROW ─── */
+.action-row{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+.filter-select{
+  padding:8px 12px;background:var(--bg);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);font-family:'Heebo',sans-serif;
+  font-size:12px;outline:none;cursor:pointer;
+}
+.filter-select:focus{border-color:var(--accent);}
+
+/* ─── MODAL ─── */
+.modal-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.75);z-index:1000;
+  align-items:center;justify-content:center;padding:16px;
+}
+.modal-overlay.open{display:flex;}
+.modal{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;padding:28px;
+  width:560px;max-width:100%;max-height:92vh;overflow-y:auto;
+  direction:rtl;
+}
+.modal-title{
+  font-size:17px;font-weight:700;margin-bottom:20px;
+  padding-bottom:14px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;
+}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.form-group{margin-bottom:14px;}
+.form-full{grid-column:1/-1;}
+label{display:block;font-size:11px;font-weight:700;color:var(--text2);margin-bottom:5px;letter-spacing:.04em;}
+input,select,textarea{
+  width:100%;padding:9px 12px;background:var(--bg);
+  border:1px solid var(--border);border-radius:8px;
+  color:var(--text);font-family:'Heebo',sans-serif;font-size:13px;
+  outline:none;transition:border .15s;direction:rtl;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+textarea{resize:vertical;min-height:75px;}
+select option{background:var(--surface);}
+.modal-actions{display:flex;gap:10px;margin-top:20px;}
+
+/* ─── CLIENT CARDS ─── */
+.client-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;}
+.client-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:18px;cursor:pointer;
+  transition:all .15s;
+}
+.client-card:hover{border-color:var(--accent);transform:translateY(-1px);}
+.cc-name{font-size:15px;font-weight:700;}
+.cc-id{font-size:11px;color:var(--text3);margin-top:2px;}
+.cc-meta{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px 14px;font-size:12px;color:var(--text2);}
+.cc-meta span{display:flex;align-items:center;gap:4px;}
+.cc-actions{display:flex;gap:6px;margin-top:14px;border-top:1px solid var(--border);padding-top:12px;}
+
+/* ─── CLIENT PROFILE ─── */
+#view-client-profile .profile-header{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:24px;margin-bottom:20px;
+  display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;
+}
+.profile-avatar{
+  width:52px;height:52px;border-radius:50%;
+  background:rgba(201,168,76,.15);border:2px solid var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;font-weight:700;color:var(--accent);flex-shrink:0;
+}
+.profile-info{flex:1;}
+.profile-name{font-size:20px;font-weight:800;}
+.profile-details{display:flex;flex-wrap:wrap;gap:10px 20px;margin-top:10px;font-size:13px;color:var(--text2);}
+.profile-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;}
+.ptab{
+  padding:10px 20px;cursor:pointer;font-size:13px;font-weight:600;
+  color:var(--text3);border-bottom:2px solid transparent;
+  transition:all .15s;
+}
+.ptab:hover{color:var(--text);}
+.ptab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.ptab-content{display:none;}
+.ptab-content.active{display:block;}
+.ctab-content{display:none;}
+.ctab-content.active{display:block;}
+
+/* ─── CALENDAR ─── */
+.cal-grid{
+  display:grid;grid-template-columns:repeat(7,1fr);
+  gap:1px;background:var(--border);border-radius:10px;overflow:hidden;
+}
+.cal-hdr{background:var(--surface2);padding:10px;text-align:center;font-size:11px;font-weight:700;color:var(--text3);}
+.cal-day{background:var(--surface);min-height:82px;padding:7px;cursor:pointer;transition:background .1s;}
+.cal-day:hover{background:var(--surface2);}
+.cal-day.today{background:rgba(201,168,76,.07);}
+.cal-day.other{opacity:.35;}
+.cal-daynum{font-size:12px;font-weight:600;color:var(--text2);}
+.cal-day.today .cal-daynum{color:var(--accent);font-weight:800;}
+.cal-evt{
+  background:var(--info);color:#fff;font-size:10px;
+  padding:2px 5px;border-radius:3px;margin-top:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  cursor:pointer;
+}
+.cal-evt:hover{opacity:.85;}
+
+/* ─── TASK ─── */
+.task-done td{opacity:.45;text-decoration:line-through;}
+.priority-high{color:var(--danger);font-weight:700;}
+.priority-med{color:var(--warn);}
+.priority-low{color:var(--text3);}
+
+/* ─── QUICK STATUS ─── */
+.qs-select{
+  padding:4px 8px;background:transparent;border:1px solid var(--border);
+  border-radius:6px;color:var(--text2);font-family:'Heebo',sans-serif;
+  font-size:11px;cursor:pointer;outline:none;transition:border .15s;
+}
+.qs-select:focus{border-color:var(--accent);}
+
+/* ─── HINT ─── */
+.hint{
+  background:rgba(90,156,245,.08);border:1px solid rgba(90,156,245,.25);
+  border-radius:8px;padding:10px 14px;font-size:12px;color:var(--info);
+  margin-top:10px;line-height:1.5;
+}
+
+/* ─── BACKUP MODAL ─── */
+.bk-option{
+  border:1px solid var(--border);border-radius:10px;
+  padding:16px;margin-bottom:12px;cursor:pointer;transition:all .15s;
+}
+.bk-option:hover{border-color:var(--accent);}
+.bk-option h4{font-size:14px;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.bk-option p{font-size:12px;color:var(--text3);line-height:1.5;}
+.bk-btns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+#gdrive-status{
+  font-size:12px;padding:8px 12px;border-radius:6px;
+  margin-top:8px;display:none;
+}
+#gdrive-status.ok{background:rgba(76,175,130,.15);color:var(--success);display:block;}
+#gdrive-status.err{background:rgba(224,90,106,.15);color:var(--danger);display:block;}
+#gdrive-status.info{background:rgba(90,156,245,.15);color:var(--info);display:block;}
+
+/* ─── MISC ─── */
+.empty{text-align:center;padding:52px 20px;color:var(--text3);}
+.empty-icon{font-size:40px;margin-bottom:10px;opacity:.5;}
+.empty-text{font-size:14px;}
+.amount{font-weight:700;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+
+/* ─── CASE TAB CONTENT ─── */
+.ctab-content{display:none;}
+.ctab-content.active{display:block;}
+/* ─── LOG ENTRY ─── */
+.log-entry{
+  border-right:3px solid var(--accent);padding:12px 14px;margin-bottom:10px;
+  background:#eef3fc;border-radius:0 8px 8px 0;position:relative;
+  border:1px solid #c8d8f0;border-right:3px solid var(--accent2);
+}
+.log-entry-date{font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600;}
+.log-entry-text{font-size:13px;line-height:1.6;white-space:pre-wrap;}
+.log-entry-actions{display:flex;gap:5px;margin-top:7px;}
+.log-entry-del{
+  position:absolute;top:8px;left:8px;
+  display:none;cursor:pointer;color:var(--text3);font-size:13px;
+  background:var(--surface2);border:none;padding:2px 6px;border-radius:4px;
+}
+.log-entry:hover .log-entry-del{display:block;}
+/* ─── HEARING/MEETING ITEM ─── */
+.cev-item{
+  display:flex;align-items:flex-start;gap:14px;
+  padding:12px 0;border-bottom:1px solid var(--border);
+}
+.cev-item:last-child{border-bottom:none;}
+.cev-date-block{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:8px;padding:6px 10px;text-align:center;min-width:52px;flex-shrink:0;
+}
+.cev-month{font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;}
+.cev-day{font-size:20px;font-weight:800;color:var(--text);line-height:1.1;}
+.cev-info{flex:1;}
+.cev-title{font-size:13px;font-weight:700;}
+.cev-sub{font-size:12px;color:var(--text2);margin-top:3px;}
+.cev-past{opacity:.55;}
+.cev-next .cev-date-block{border-color:var(--accent);background:rgba(201,168,76,.08);}
+.cev-next .cev-day{color:var(--accent);}
+.case-row-link{cursor:pointer;text-decoration:underline;text-underline-offset:2px;font-weight:600;}
+.case-row-link:hover{color:var(--accent);}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:768px){
+  :root{--sidebar-w:0px;}
+  #sidebar{display:none;}
+  #main{margin-right:0;padding-bottom:calc(62px + var(--safe-bottom));}
+  .topbar{display:none;}
+  #mob-topbar{display:flex;}
+  #mob-nav{display:block;}
+  .stats-row{grid-template-columns:1fr 1fr;gap:10px;}
+  .page-content{padding:14px 16px;}
+  #view-dashboard .dash-cols{grid-template-columns:1fr!important;}
+  .form-row{grid-template-columns:1fr;}
+  .modal{padding:20px;}
+  .client-grid{grid-template-columns:1fr;}
+  .cal-day{min-height:58px;padding:4px;}
+  td,th{padding:8px 10px;}
+  .search-wrap{display:none;}
+  .profile-header{flex-direction:column;}
+}
+
+.search-result-item{padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;display:flex;align-items:center;gap:10px;}
+.search-result-item:hover{background:var(--surface2);}
+.search-result-item:last-child{border-bottom:none;}
+.sri-type{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;min-width:50px;}
+.sri-title{font-size:13px;font-weight:600;}
+.sri-sub{font-size:11px;color:var(--text3);}
+
+</style>
+</head>
+<body>
+
+<!-- ════ SIDEBAR ════ -->
+<nav id="sidebar">
+  <div class="logo">
+    <div class="logo-mark"><svg viewBox="0 0 32 32" fill="none" stroke="#60a5fa" stroke-width="1.8" width="28" height="28"><path d="M16 4v24M8 8l16 16M24 8L8 24"/><circle cx="16" cy="4" r="2.5"/><path d="M6 20l4-8 4 8M18 12l4 8 4-8"/><line x1="5" y1="20" x2="15" y2="20"/><line x1="17" y1="20" x2="27" y2="20"/></svg></div>
+    <div class="logo-title">Legal Manager</div>
+    <div class="logo-sub">ניהול תיקים משפטיים</div>
+  </div>
+  <div class="nav">
+    <div class="nav-section">ראשי</div>
+    <div class="nav-item active" data-view="dashboard">
+      <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" width="17" height="17"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M7 18v-6h6v6"/></svg></span> מסך הבית
+    </div>
+    <div class="nav-section">ניהול</div>
+    <div class="nav-item" data-view="clients">
+      <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3.5"/><path d="M2.5 17.5c0-4 3.36-6.5 7.5-6.5s7.5 2.5 7.5 6.5"/></svg></span> לקוחות
+    </div>
+    <div class="nav-item" data-view="cases">
+      <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 6a2 2 0 012-2h3.5l2 2H16a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg></span> תיקים
+    </div>
+    <div class="nav-item" data-view="tasks">
+      <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 10l4 4 8-8"/><rect x="2" y="2" width="16" height="16" rx="3"/></svg></span> משימות
+      <span class="nbadge" id="sb-badge">0</span>
+    </div>
+    <div class="nav-item" data-view="calendar">
+      <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="4" width="16" height="14" rx="2"/><path d="M6 2v4M14 2v4M2 9h16"/></svg></span> יומן
+    </div>
+    <div class="nav-item" data-view="charges">
+      <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1" y="5" width="18" height="12" rx="2"/><path d="M1 9h18M7 13h2M12 13h1"/></svg></span> חיובים
+    </div>
+    <div class="nav-item" data-view="search"><span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8.5" cy="8.5" r="5"/><path d="M13 13l4 4"/></svg></span> חיפוש</div><div class="nav-section">הגדרות</div>
+    <div class="nav-item" onclick="openModal('settings')">
+      <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="3"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.22 4.22l1.42 1.42M14.36 14.36l1.42 1.42M4.22 15.78l1.42-1.42M14.36 5.64l1.42-1.42"/></svg></span> סוגי תיקים ומחירון
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <button class="sfbtn" onclick="openBackup()"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13" style="vertical-align:middle;margin-left:4px"><path d="M5 14.5A4 4 0 016 7a5 5 0 019.9 1H16a3 3 0 010 6H5z"/></svg>גיבוי</button>
+    <button class="sfbtn" onclick="triggerImport()"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13" style="vertical-align:middle;margin-left:4px"><path d="M10 3v10M6 9l4 4 4-4"/><path d="M3 15h14"/></svg>ייבוא</button>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+  </div>
+</nav>
+
+<!-- ════ MAIN ════ -->
+<div id="main">
+
+  <!-- Desktop Topbar -->
+  <div class="topbar">
+    <div>
+      <div class="page-title" id="dt-title">מסך הבית</div>
+      <div class="page-sub" id="dt-sub">סקירה כללית</div>
+    </div>
+    <div class="topbar-right">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="חיפוש לקוח, תיק..." oninput="handleSearch(this.value)">
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Topbar -->
+  <div id="mob-topbar">
+    <div class="mob-title" id="mob-title">מסך הבית</div>
+    <div class="mob-actions">
+      <button class="btn btn-ghost btn-sm" onclick="openBackup()">☁️</button>
+      <button class="btn btn-primary btn-sm" id="mob-add" onclick="mobileAdd()" style="display:none">+ הוסף</button>
+    </div>
+  </div>
+
+  <!-- ── DASHBOARD ── -->
+  <div id="view-dashboard" class="view active page-content">
+    <div class="stats-row">
+      <div class="stat-card sc-navy">
+        <div class="stat-icon-wrap sc-i-navy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.58-7 8-7s8 3 8 7"/></svg></div>
+        <div class="stat-body"><div class="stat-value" id="s-clients">0</div><div class="stat-label">לקוחות</div></div>
+      </div>
+      <div class="stat-card sc-blue">
+        <div class="stat-icon-wrap sc-i-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg></div>
+        <div class="stat-body"><div class="stat-value" id="s-cases">0</div><div class="stat-label">תיקים פעילים</div></div>
+      </div>
+      <div class="stat-card sc-amber">
+        <div class="stat-icon-wrap sc-i-amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22"><path d="M9 11l3 3 7-7"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg></div>
+        <div class="stat-body"><div class="stat-value" id="s-reminders">0</div><div class="stat-label">תזכורות היום</div></div>
+      </div>
+      <div class="stat-card sc-emerald">
+        <div class="stat-icon-wrap sc-i-emerald"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20M8 15h2M14 15h2"/></svg></div>
+        <div class="stat-body"><div class="stat-value" id="s-charges">₪0</div><div class="stat-label">לגבייה</div></div>
+      </div>
+    </div>
+    <div class="dash-cols" style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+      <div class="card">
+        <div class="card-title"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" width="15" height="15" style="margin-left:6px;vertical-align:middle"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l2.5 2.5"/></svg>משימות פתוחות</div>
+        <div id="dash-tasks"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" width="16" height="16" style="margin-left:6px;vertical-align:middle"><rect x="2" y="3" width="16" height="15" rx="2"/><path d="M6 1v4M14 1v4M2 8h16"/></svg>אירועים קרובים</div>
+        <div id="dash-events"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CLIENTS ── -->
+  <div id="view-clients" class="view page-content">
+    <div class="action-row">
+      <button class="btn btn-primary" onclick="openNewClient()">+ לקוח חדש</button>
+    </div>
+    <div class="client-grid" id="clients-grid"></div>
+  </div>
+
+  <!-- ── CLIENT PROFILE ── -->
+  <div id="view-client-profile" class="view page-content">
+    <div class="action-row">
+      <button class="btn btn-ghost" onclick="navTo('clients')">← חזרה ללקוחות</button>
+    </div>
+    <div class="profile-header">
+      <div style="display:flex;gap:16px;align-items:center;">
+        <div class="profile-avatar" id="prof-avatar"></div>
+        <div class="profile-info">
+          <div class="profile-name" id="prof-name"></div>
+          <div class="profile-details" id="prof-details"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" id="prof-edit-btn">✏️ עריכה</button>
+      </div>
+    </div>
+    <div class="profile-tabs">
+      <div class="ptab active" data-tab="prof-cases">📁 תיקים</div>
+      <div class="ptab" data-tab="prof-charges">💰 חיובים</div>
+      <div class="ptab" data-tab="prof-tasks">✅ משימות</div>
+    </div>
+    <div id="prof-cases" class="ptab-content active">
+      <div class="card"><div class="table-wrap"><table>
+        <thead><tr><th>מספר</th><th>שם התיק</th><th>סוג</th><th>סטטוס</th><th>תאריך</th><th>פעולות</th></tr></thead>
+        <tbody id="prof-cases-tbody"></tbody>
+      </table></div></div>
+    </div>
+    <div id="prof-charges" class="ptab-content">
+      <div class="card"><div class="table-wrap"><table>
+        <thead><tr><th>תיאור</th><th>סכום</th><th>תאריך</th><th>סטטוס</th><th></th></tr></thead>
+        <tbody id="prof-charges-tbody"></tbody>
+      </table></div></div>
+    </div>
+    <div id="prof-tasks" class="ptab-content">
+      <div class="card"><div class="table-wrap"><table>
+        <thead><tr><th>✓</th><th>משימה</th><th>תיק</th><th>תאריך אחרון לביצוע</th><th>עדיפות</th></tr></thead>
+        <tbody id="prof-tasks-tbody"></tbody>
+      </table></div></div>
+    </div>
+  </div>
+
+  <!-- ── CASE PROFILE ── -->
+  <div id="view-case-profile" class="view page-content">
+    <div class="action-row">
+      <button class="btn btn-ghost" onclick="navTo('cases')">← חזרה לתיקים</button>
+    </div>
+    <!-- Case Header -->
+    <div class="card" style="margin-bottom:18px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;" id="cp-num"></div>
+          <div style="font-size:20px;font-weight:800;" id="cp-name"></div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px 20px;margin-top:10px;font-size:13px;color:var(--text2);" id="cp-meta"></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" id="cp-edit-btn">✏️ עריכת תיק</button>
+          <button class="btn btn-primary btn-sm" onclick="openCaseHearingModal()">+ דיון</button>
+          <button class="btn btn-primary btn-sm" onclick="openCaseMeetingModal()">+ פגישה</button>
+        </div>
+      </div>
+    </div>
+    <!-- Case Tabs -->
+    <div class="profile-tabs" id="case-tabs">
+      <div class="ptab active" data-ctab="cp-log">📋 יומן פעולות</div>
+      <div class="ptab" data-ctab="cp-hearings">🏛 דיונים</div>
+      <div class="ptab" data-ctab="cp-meetings">🤝 פגישות</div>
+      <div class="ptab" data-ctab="cp-tasks">✅ משימות</div>
+      <div class="ptab" data-ctab="cp-charges">💰 חיובים</div>
+    </div>
+
+    <!-- Log Tab -->
+    <div id="cp-log" class="ctab-content active">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div class="card-title" style="margin:0;">📋 יומן פעולות</div>
+          <button class="btn btn-primary btn-sm" onclick="openLogEntry()">+ הוסף פעולה</button>
+        </div>
+        <div id="cp-log-list"></div>
+      </div>
+    </div>
+
+    <!-- Hearings Tab -->
+    <div id="cp-hearings" class="ctab-content">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div class="card-title" style="margin:0;">🏛 מועדי דיון</div>
+          <button class="btn btn-primary btn-sm" onclick="openCaseHearingModal()">+ דיון חדש</button>
+        </div>
+        <div id="cp-hearings-list"></div>
+      </div>
+    </div>
+
+    <!-- Meetings Tab -->
+    <div id="cp-meetings" class="ctab-content">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div class="card-title" style="margin:0;">🤝 פגישות</div>
+          <button class="btn btn-primary btn-sm" onclick="openCaseMeetingModal()">+ פגישה חדשה</button>
+        </div>
+        <div id="cp-meetings-list"></div>
+      </div>
+    </div>
+
+    <!-- Tasks Tab -->
+    <div id="cp-tasks" class="ctab-content">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div class="card-title" style="margin:0;">✅ משימות</div>
+          <button class="btn btn-primary btn-sm" onclick="openTaskForCase()">+ משימה</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>✓</th><th>משימה</th><th>תאריך אחרון לביצוע</th><th>עדיפות</th><th></th></tr></thead>
+          <tbody id="cp-tasks-tbody"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- Charges Tab -->
+    <div id="cp-charges" class="ctab-content">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div class="card-title" style="margin:0;">💰 חיובים</div>
+          <button class="btn btn-primary btn-sm" onclick="openChargeForCase()">+ חיוב</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>תיאור</th><th>סכום</th><th>תאריך</th><th>סטטוס</th><th></th></tr></thead>
+          <tbody id="cp-charges-tbody"></tbody>
+        </table></div>
+        <div id="cp-charges-summary" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CASES ── -->
+  <div id="view-cases" class="view page-content">
+    <div class="action-row">
+      <button class="btn btn-primary" onclick="openNewCase()">+ תיק חדש</button>
+      <select class="filter-select" id="cases-filter" onchange="renderCases()">
+        <option value="">כל התיקים</option>
+        <option value="active">פעיל</option>
+        <option value="pending">ממתין</option>
+        <option value="urgent">דחוף</option>
+        <option value="closed">סגור</option>
+      </select>
+    </div>
+    <div class="card">
+      <div class="table-wrap"><table>
+        <thead><tr><th>מספר</th><th>שם התיק</th><th>לקוח</th><th>סוג</th><th>תת-סוג</th><th>סטטוס</th><th>תאריך פתיחה</th><th>פעולות</th></tr></thead>
+        <tbody id="cases-tbody"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ── TASKS ── -->
+  <div id="view-tasks" class="view page-content">
+    <div class="action-row">
+      <button class="btn btn-primary" onclick="openNewTask()">+ משימה חדשה</button>
+      <select class="filter-select" id="tasks-filter" onchange="renderTasks()">
+        <option value="open">פתוחות</option>
+        <option value="reminder">תזכורת להיום</option>
+        <option value="all">הכל</option>
+        <option value="done">הושלמו</option>
+      </select>
+    </div>
+    <div class="card">
+      <div class="table-wrap"><table>
+        <thead><tr><th>✓</th><th>משימה</th><th>תיק</th><th>תזכורת</th><th>תאריך אחרון לביצוע</th><th>עדיפות</th><th>פעולות</th></tr></thead>
+        <tbody id="tasks-tbody"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ── CALENDAR ── -->
+  <div id="view-calendar" class="view page-content">
+    <div class="action-row" style="justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="calMove(-1)">→</button>
+        <span id="cal-label" style="font-weight:700;font-size:15px;min-width:120px;text-align:center;"></span>
+        <button class="btn btn-ghost btn-sm" onclick="calMove(1)">←</button>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="exportICS()">📆 ייצוא Apple</button>
+        <button class="btn btn-primary btn-sm" onclick="openNewEvent()">+ אירוע</button>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+    <div class="hint">💡 לחצי על יום להוספת אירוע. לסנכרון עם Apple Calendar — ייצאי קובץ .ics ופתחי אותו ב-Mac/iPhone.</div>
+  </div>
+
+  <!-- ── CHARGES ── -->
+  <div id="view-charges" class="view page-content">
+    <div class="action-row">
+      <button class="btn btn-primary" onclick="openNewCharge()">+ חיוב חדש</button>
+      <select class="filter-select" id="charges-filter" onchange="renderCharges()">
+        <option value="">כל החיובים</option>
+        <option value="unpaid">לא שולם</option>
+        <option value="partial">שולם חלקית</option>
+        <option value="paid">שולם</option>
+      </select>
+    </div>
+    <div class="card" style="margin-bottom:14px;display:flex;gap:28px;align-items:center;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.06em;">לגבייה</div>
+        <div style="font-size:22px;font-weight:800;color:var(--danger);" id="total-unpaid">₪0</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.06em;">נגבה</div>
+        <div style="font-size:22px;font-weight:800;color:var(--success);" id="total-paid">₪0</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="table-wrap"><table>
+        <thead><tr><th>תיאור</th><th>לקוח / תיק</th><th>ללא מע״מ</th><th>כולל מע״מ</th><th>תאריך</th><th>סטטוס</th><th>פעולות</th></tr></thead>
+        <tbody id="charges-tbody"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+
+  <!-- SEARCH -->
+  <div id="view-search" class="view page-content">
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">🔍 חיפוש מתקדם</div>
+      <div class="form-row">
+        <div class="form-group"><label>טקסט חופשי</label><input id="adv-text" placeholder="שם, מספר תיק, תיאור..."></div>
+        <div class="form-group"><label>סוג</label>
+          <select id="adv-type">
+            <option value="">הכל</option>
+            <option value="client">לקוחות</option>
+            <option value="case">תיקים</option>
+            <option value="task">משימות</option>
+            <option value="charge">חיובים</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>לקוח</label><select id="adv-client"><option value="">כל הלקוחות</option></select></div>
+        <div class="form-group"><label>סטטוס תיק</label>
+          <select id="adv-status">
+            <option value="">כל הסטטוסים</option>
+            <option value="active">פעיל</option>
+            <option value="pending">ממתין</option>
+            <option value="urgent">דחוף</option>
+            <option value="closed">סגור</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>מתאריך</label><input id="adv-from" type="date" dir="ltr"></div>
+        <div class="form-group"><label>עד תאריך</label><input id="adv-to" type="date" dir="ltr"></div>
+      </div>
+      <div style="margin-top:4px;"><button class="btn btn-primary" onclick="runAdvSearch()">🔍 חיפוש</button></div>
+    </div>
+    <div id="adv-results"></div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- ════ MOBILE NAV ════ -->
+<nav id="mob-nav">
+  <div class="mob-nav-row">
+    <div class="mni active" data-view="dashboard"><span class="mni-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" width="18" height="18"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M7 18v-6h6v6"/></svg></span>בית</div>
+    <div class="mni" data-view="clients"><span class="mni-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" width="20" height="20"><circle cx="10" cy="7" r="3.5"/><path d="M2.5 17.5c0-4 3.36-6.5 7.5-6.5s7.5 2.5 7.5 6.5"/></svg></span>לקוחות</div>
+    <div class="mni" data-view="cases"><span class="mni-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" width="20" height="20"><path d="M2 6a2 2 0 012-2h3.5l2 2H16a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg></span>תיקים</div>
+    <div class="mni" data-view="tasks" style="position:relative;">
+      <span class="mni-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" width="20" height="20"><path d="M4 10l4 4 8-8"/><rect x="2" y="2" width="16" height="16" rx="3"/></svg></span>
+      <span class="mni-badge" id="mob-badge" style="display:none"></span>
+      משימות
+    </div>
+    <div class="mni" data-view="calendar"><span class="mni-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" width="20" height="20"><rect x="2" y="4" width="16" height="14" rx="2"/><path d="M6 2v4M14 2v4M2 9h16"/></svg></span>יומן</div>
+    <div class="mni" data-view="charges"><span class="mni-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" width="20" height="20"><rect x="1" y="5" width="18" height="12" rx="2"/><path d="M1 9h18M7 13h2M12 13h1"/></svg></span>חיובים</div>
+  </div>
+</nav>
+
+<!-- ════ MODALS ════ -->
+
+<!-- CLIENT -->
+<div class="modal-overlay" id="modal-client">
+  <div class="modal">
+    <div class="modal-title" id="mc-title">👤 לקוח חדש</div>
+    <input type="hidden" id="mc-id">
+    <div class="form-row">
+      <div class="form-group"><label>שם פרטי *</label><input id="mc-firstname" placeholder="ישראל"></div>
+      <div class="form-group"><label>שם משפחה *</label><input id="mc-lastname" placeholder="ישראלי"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>ת.ז. / ח.פ.</label><input id="mc-idnum" placeholder="000000000"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>טלפון</label><input id="mc-phone" type="tel" placeholder="050-0000000"></div>
+      <div class="form-group"><label>דוא״ל</label><input id="mc-email" type="email" placeholder="mail@example.com"></div>
+    </div>
+    <div class="form-group form-full"><label>כתובת</label><input id="mc-addr" placeholder="רחוב, עיר"></div>
+    <div class="form-group form-full"><label>הערות</label><textarea id="mc-notes" placeholder="הערות..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveClient()">שמירה</button>
+      <button class="btn btn-ghost" onclick="closeModal('client')">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- CASE -->
+<div class="modal-overlay" id="modal-case">
+  <div class="modal">
+    <div class="modal-title" id="mcs-title">📁 תיק חדש</div>
+    <input type="hidden" id="mcs-id">
+    <div class="form-row">
+      <div class="form-group"><label>שם התיק *</label><input id="mcs-name" placeholder="פלוני נ׳ אלמוני"></div>
+      <div class="form-group"><label>מספר תיק</label><input id="mcs-num" placeholder="2025-001"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>לקוח *</label><select id="mcs-client"></select></div>
+      <div class="form-group">
+        <label style="display:flex;justify-content:space-between;align-items:center;">
+          סוג
+          <span onclick="openModal('settings')" style="font-size:10px;color:var(--accent);cursor:pointer;font-weight:600;">⚙️ ערוך סוגים</span>
+        </label>
+        <select id="mcs-type" onchange="updateSubtypes()">
+        </select>
+      </div>
+    </div>
+    <div class="form-row" id="subtype-row" style="display:none;">
+      <div class="form-group form-full">
+        <label style="display:flex;justify-content:space-between;align-items:center;">
+          תת-סוג
+          <span onclick="openModal('settings')" style="font-size:10px;color:var(--accent);cursor:pointer;font-weight:600;">⚙️ ערוך תת-סוגים</span>
+        </label>
+        <select id="mcs-subtype">
+          <option value="">— בחרי תת-סוג —</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>גורם מפנה <span onclick="openModal('settings')" style="font-size:10px;color:var(--accent2);cursor:pointer;font-weight:600;float:left;">⚙️ ערוך</span></label><select id="mcs-referrer"></select></div></div><div class="form-row"><div class="form-group"><label>סטטוס</label><select id="mcs-status">
+          <option value="active">פעיל</option><option value="pending">ממתין</option>
+          <option value="urgent">דחוף</option><option value="closed">סגור</option>
+        </select>
+      </div>
+      <div class="form-group"><label>תאריך פתיחה</label><input id="mcs-date" type="date" dir="ltr"></div>
+    </div>
+    <div class="form-row"><div class="form-group"><label>תאריך סגירה</label><input id="mcs-close-date" type="date" dir="ltr"></div><div class="form-group"><label>זיהוי נוסף</label><input id="mcs-extra-id" placeholder="מספר תיק בית משפט, ת.פ..."></div></div><div class="form-group form-full"><label>ערכאה / בית משפט</label><input id="mcs-court" placeholder='ביהמ"ש שלום תל אביב'></div>
+    <div class="form-group form-full"><label>תיאור</label><textarea id="mcs-desc" placeholder="תיאור קצר..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveCase()">שמירה</button>
+      <button class="btn btn-ghost" onclick="closeModal('case')">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- TASK -->
+<div class="modal-overlay" id="modal-task">
+  <div class="modal">
+    <div class="modal-title" id="mt-title">✅ משימה חדשה</div>
+    <input type="hidden" id="mt-id">
+    <div class="form-group"><label>כותרת *</label><input id="mt-title-inp" placeholder="תיאור המשימה"></div>
+    <div class="form-row">
+      <div class="form-group"><label>תיק קשור</label><select id="mt-case"><option value="">— ללא —</option></select></div>
+      <div class="form-group">
+        <label>עדיפות</label>
+        <select id="mt-prio">
+          <option value="high">גבוהה 🔴</option>
+          <option value="med" selected>בינונית 🟡</option>
+          <option value="low">נמוכה ⚪</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>תאריך תזכורת</label><input id="mt-reminder" type="date" dir="ltr"></div>
+      <div class="form-group"><label>תאריך אחרון לביצוע</label><input id="mt-due" type="date" dir="ltr"></div>
+    </div>
+    <div class="form-group form-full"><label>הערות</label><textarea id="mt-notes" placeholder="פרטים נוספים..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveTask()">שמירה</button>
+      <button class="btn btn-ghost" onclick="closeModal('task')">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- EVENT -->
+<div class="modal-overlay" id="modal-event">
+  <div class="modal">
+    <div class="modal-title" id="mev-title">📅 אירוע חדש</div>
+    <input type="hidden" id="mev-id">
+    <div class="form-group"><label>כותרת *</label><input id="mev-title-inp" placeholder="דיון, פגישה, מועד הגשה..."></div>
+    <div class="form-row">
+      <div class="form-group"><label>תאריך *</label><input id="mev-date" type="date" dir="ltr"></div>
+      <div class="form-group"><label>שעת התחלה</label><input id="mev-time" type="time" dir="ltr"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>שעת סיום</label><input id="mev-endtime" type="time" dir="ltr"></div>
+      <div class="form-group"><label>תיק קשור</label><select id="mev-case"><option value="">— ללא —</option></select></div>
+    </div>
+    <div class="form-group form-full"><label>מיקום</label><input id="mev-loc" placeholder="כתובת / קישור זום"></div>
+    <div class="form-group form-full"><label>הערות</label><textarea id="mev-notes" placeholder="פרטים נוספים..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveEvent()">שמירה</button>
+      <button class="btn btn-ghost" onclick="closeModal('event')">ביטול</button>
+      <button class="btn btn-danger-soft btn-sm" id="mev-delete-btn" style="display:none;margin-right:auto" onclick="deleteEventFromModal()">🗑 מחיקה</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHARGE -->
+<div class="modal-overlay" id="modal-charge">
+  <div class="modal">
+    <div class="modal-title" id="mch-title">💰 חיוב חדש</div>
+    <input type="hidden" id="mch-id">
+    <div class="form-group">
+      <label style="display:flex;justify-content:space-between;align-items:center;">
+        מחירון — בחרי סוג חיוב
+        <span onclick="openModal('settings');closeModal('charge')" style="font-size:10px;color:var(--accent);cursor:pointer;font-weight:600;">⚙️ ערוך מחירון</span>
+      </label>
+      <select id="mch-template" onchange="applyChargeTemplate()">
+        <option value="">— בחירה מהמחירון (אופציונלי) —</option>
+      </select>
+    </div>
+    <div class="form-group"><label>תיאור *</label><input id="mch-desc" placeholder='שכ"ט ייעוץ, הכנת חוזה...'></div>
+    <div class="form-row">
+      <div class="form-group"><label>לקוח *</label><select id="mch-client" onchange="onChargeClient()"></select></div>
+      <div class="form-group"><label>תיק קשור</label><select id="mch-case"><option value="">— ללא —</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>סכום ללא מע״מ (₪) *</label><input id="mch-amount" type="number" placeholder="0" min="0" oninput="updateVatPreview()"></div>
+      <div class="form-group"><label>תאריך</label><input id="mch-date" type="date" dir="ltr"></div>
+    </div>
+    <div id="vat-preview" style="font-size:12px;color:var(--text2);margin:0 0 10px;padding:8px 10px;background:rgba(30,79,160,.07);border-radius:7px;display:none;"></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>סטטוס</label>
+        <select id="mch-status">
+          <option value="unpaid">לא שולם</option>
+          <option value="partial">שולם חלקית</option>
+          <option value="paid">שולם</option>
+        </select>
+      </div>
+      <div class="form-group"><label>הערות</label><input id="mch-notes" placeholder="הערה..."></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveCharge()">שמירה</button>
+      <button class="btn btn-ghost" onclick="closeModal('charge')">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- HEARING MODAL -->
+<div class="modal-overlay" id="modal-hearing">
+  <div class="modal">
+    <div class="modal-title" id="mh-title">🏛 דיון חדש</div>
+    <input type="hidden" id="mh-id">
+    <input type="hidden" id="mh-caseid">
+    <div class="form-group"><label>תיאור הדיון *</label><input id="mh-title-inp" placeholder='דיון הוכחות, קדם משפט, גזר דין...'></div>
+    <div class="form-row">
+      <div class="form-group"><label>תאריך *</label><input id="mh-date" type="date" dir="ltr"></div>
+      <div class="form-group"><label>שעה</label><input id="mh-time" type="time" dir="ltr"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>מיקום / אולם</label><input id="mh-loc" placeholder='ביהמ"ש שלום ת"א, אולם 3'></div>
+      <div class="form-group"><label>שופט</label><input id="mh-judge" placeholder="כב' השופט..."></div>
+    </div>
+    <div class="form-group form-full"><label>הערות</label><textarea id="mh-notes" placeholder="פרטים נוספים..."></textarea></div>
+    <div class="form-group form-full" style="display:flex;align-items:center;gap:10px;background:rgba(90,156,245,.07);border:1px solid rgba(90,156,245,.2);border-radius:8px;padding:12px;">
+      <input type="checkbox" id="mh-add-cal" style="width:16px;height:16px;accent-color:var(--accent);">
+      <label style="margin:0;color:var(--text);cursor:pointer;font-size:13px;" for="mh-add-cal">📅 הוסף גם ליומן הכללי</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveHearing()">שמירה</button>
+      <button class="btn btn-ghost" onclick="closeModal('hearing')">ביטול</button>
+      <button class="btn btn-danger-soft btn-sm" id="mh-del-btn" style="display:none;margin-right:auto" onclick="deleteHearing()">🗑 מחיקה</button>
+    </div>
+  </div>
+</div>
+
+<!-- MEETING MODAL -->
+<div class="modal-overlay" id="modal-meeting">
+  <div class="modal">
+    <div class="modal-title" id="mm-title">🤝 פגישה חדשה</div>
+    <input type="hidden" id="mm-id">
+    <input type="hidden" id="mm-caseid">
+    <div class="form-group"><label>נושא הפגישה *</label><input id="mm-title-inp" placeholder="פגישת ייעוץ, הכנה לדיון..."></div>
+    <div class="form-row">
+      <div class="form-group"><label>תאריך *</label><input id="mm-date" type="date" dir="ltr"></div>
+      <div class="form-group"><label>שעה</label><input id="mm-time" type="time" dir="ltr"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>שעת סיום</label><input id="mm-endtime" type="time" dir="ltr"></div>
+      <div class="form-group"><label>מיקום</label><input id="mm-loc" placeholder="משרד, זום, טלפון..."></div>
+    </div>
+    <div class="form-group form-full"><label>הערות</label><textarea id="mm-notes" placeholder="נושאים לדיון, סיכום..."></textarea></div>
+    <div class="form-group form-full" style="display:flex;align-items:center;gap:10px;background:rgba(90,156,245,.07);border:1px solid rgba(90,156,245,.2);border-radius:8px;padding:12px;">
+      <input type="checkbox" id="mm-add-cal" style="width:16px;height:16px;accent-color:var(--accent);">
+      <label style="margin:0;color:var(--text);cursor:pointer;font-size:13px;" for="mm-add-cal">📅 הוסף גם ליומן הכללי</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveMeeting()">שמירה</button>
+      <button class="btn btn-ghost" onclick="closeModal('meeting')">ביטול</button>
+      <button class="btn btn-danger-soft btn-sm" id="mm-del-btn" style="display:none;margin-right:auto" onclick="deleteMeeting()">🗑 מחיקה</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOG ENTRY MODAL -->
+<div class="modal-overlay" id="modal-log">
+  <div class="modal">
+    <div class="modal-title" id="ml-title">📋 הוספת פעולה</div>
+    <input type="hidden" id="ml-id">
+    <input type="hidden" id="ml-caseid">
+    <div class="form-row">
+      <div class="form-group"><label>תאריך *</label><input id="ml-date" type="date" dir="ltr"></div>
+      <div class="form-group">
+        <label>סוג פעולה</label>
+        <select id="ml-type">
+          <option value="general">כללי</option>
+          <option value="filing">הגשת כתב בית דין</option>
+          <option value="hearing">דיון</option>
+          <option value="decision">החלטה / פסק דין</option>
+          <option value="correspondence">התכתבות</option>
+          <option value="research">מחקר משפטי</option>
+          <option value="other">אחר</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group form-full"><label>תיאור הפעולה *</label><textarea id="ml-text" placeholder="תיאור מפורט של הפעולה שבוצעה..." style="min-height:120px;"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveLogEntry()">שמירה</button>
+      <button class="btn btn-ghost" onclick="closeModal('log')">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="modal-settings">
+  <div class="modal" style="width:640px;">
+    <div class="modal-title">⚙️ הגדרות — סוגי תיקים ומחירון</div>
+
+    <!-- Case Types & Subtypes -->
+    <div style="margin-bottom:24px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--accent);">📁 סוגי תיקים ותת-סוגים</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">סוגים ראשיים</div>
+          <div id="types-list" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;"></div>
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <input id="new-type-inp" placeholder="סוג חדש..." style="flex:1;padding:7px 10px;font-size:12px;">
+            <button class="btn btn-primary btn-sm" onclick="addCaseType()">+ הוסף</button>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">תת-סוגים של: <span id="selected-type-label" style="color:var(--accent);">— בחרי סוג —</span></div>
+          <div id="subtypes-list" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;min-height:60px;"></div>
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <input id="new-subtype-inp" placeholder="תת-סוג חדש..." style="flex:1;padding:7px 10px;font-size:12px;">
+            <button class="btn btn-primary btn-sm" onclick="addSubtype()">+ הוסף</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);margin-bottom:20px;"></div>
+
+    <!-- Charge Templates -->
+    <div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--accent);">💰 מחירון חיובים</div>
+      <div id="charge-templates-list" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px;"></div>
+      <div style="display:grid;grid-template-columns:1fr 120px auto;gap:8px;align-items:end;">
+        <div class="form-group" style="margin:0;"><label>תיאור</label><input id="new-tmpl-name" placeholder='שכ"ט ייעוץ, דיון, הכנת חוזה...'></div>
+        <div class="form-group" style="margin:0;"><label>מחיר (₪)</label><input id="new-tmpl-price" type="number" placeholder="0" min="0"></div>
+        <button class="btn btn-primary btn-sm" onclick="addChargeTemplate()" style="margin-bottom:1px;">+ הוסף</button>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);margin-bottom:18px;"></div>
+    <div style="margin-bottom:18px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--accent);">📨 גורמי הפניה</div>
+      <div id="referrers-list" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px;max-height:160px;overflow-y:auto;"></div>
+      <div style="display:flex;gap:5px;">
+        <input id="new-referrer-inp" placeholder="גורם הפניה חדש..." style="flex:1;padding:6px 9px;font-size:12px;">
+        <button class="btn btn-primary btn-sm" onclick="addReferrer()">+ הוסף</button>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);margin-bottom:16px;"></div>
+    <div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--accent);">🧾 שיעור מע״מ</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input id="vat-rate-inp" type="number" min="0" max="100" style="width:90px;" placeholder="18">
+        <span style="font-size:13px;color:var(--text2);">אחוז</span>
+        <button class="btn btn-primary btn-sm" onclick="saveVatRate()">עדכן</button>
+        <span id="vat-rate-display" style="font-size:12px;color:var(--text3);"></span>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:20px;">
+      <button class="btn btn-ghost" onclick="closeModal('settings')">סגירה</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-backup">
+  <div class="modal">
+    <div class="modal-title">☁️ סנכרון וגיבוי</div>
+
+    <!-- iCloud Drive - PRIMARY -->
+    <div style="background:rgba(30,79,160,.06);border:1px solid rgba(30,79,160,.2);border-radius:12px;padding:18px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="width:36px;height:36px;background:rgba(30,79,160,.12);border-radius:9px;display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#1e4fa0" stroke-width="1.6" width="20" height="20"><path d="M5 17a4 4 0 01-.5-7.9A6 6 0 0117.4 10H18a4 4 0 010 8H5z"/></svg>
+        </div>
+        <div>
+          <div style="font-size:14px;font-weight:700;">iCloud Drive — מומלץ</div>
+          <div style="font-size:11px;color:var(--text3);">סנכרון אוטומטי בין Mac ו-iPhone</div>
+        </div>
+        <span style="margin-right:auto;background:#1e6e40;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;">הכי פשוט</span>
+      </div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:12px;">
+        ייצאי קובץ JSON פעם אחת ← שמרי אותו ב-iCloud Drive ←<br>
+        מעכשיו ייבאי ממנו ושמרי אליו — יסתנכרן אוטומטית בכל המכשירים שלך.
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary btn-sm" onclick="exportToiCloud()">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13" style="vertical-align:middle;margin-left:4px"><path d="M10 3v10M6 9l4 4 4-4"/><path d="M3 15h14"/></svg>
+          שמור ל-iCloud Drive
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="triggerImport();closeModal('backup')">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13" style="vertical-align:middle;margin-left:4px"><path d="M10 13V3M6 7l4-4 4 4"/><path d="M3 15h14"/></svg>
+          טען מ-iCloud Drive
+        </button>
+      </div>
+    </div>
+
+    <!-- Auto-sync status -->
+    <div id="sync-status-bar" style="display:none;align-items:center;gap:8px;padding:10px 14px;background:rgba(30,110,64,.07);border:1px solid rgba(30,110,64,.2);border-radius:9px;margin-bottom:14px;font-size:12px;color:var(--success);">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M4 10l4 4 8-8"/></svg>
+      <span id="sync-status-text">מסונכרן</span>
+    </div>
+
+    <!-- Google Drive - SECONDARY -->
+    <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="width:36px;height:36px;background:rgba(0,0,0,.04);border-radius:9px;display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 24 24" fill="none" width="20" height="20"><path d="M12 2L6 13h12L12 2z" fill="#1a73e8" opacity=".8"/><path d="M6 13L2 20h8L6 13z" fill="#ea4335" opacity=".8"/><path d="M18 13l-4 7h8l-4-7z" fill="#fbbc04" opacity=".9"/></svg>
+        </div>
+        <div>
+          <div style="font-size:14px;font-weight:700;">Google Drive</div>
+          <div style="font-size:11px;color:var(--text3);">גיבוי ידני לענן</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" onclick="gdriveConnect()">התחברות</button>
+        <button class="btn btn-ghost btn-sm" onclick="gdriveSave()">שמור</button>
+        <button class="btn btn-ghost btn-sm" onclick="gdriveLoad()">שחזר</button>
+      </div>
+      <div id="gdrive-status" style="margin-top:8px;font-size:12px;"></div>
+    </div>
+
+    <!-- JSON backup -->
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-ghost btn-sm" onclick="exportJSON()" style="flex:1;">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13" style="vertical-align:middle;margin-left:4px"><path d="M10 3v10M6 9l4 4 4-4"/><path d="M3 15h14"/></svg>
+        ייצוא JSON
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="triggerImport();closeModal('backup')" style="flex:1;">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13" style="vertical-align:middle;margin-left:4px"><path d="M10 13V3M6 7l4-4 4 4"/><path d="M3 15h14"/></svg>
+        ייבוא JSON
+      </button>
+    </div>
+
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-ghost" onclick="closeModal('backup')">סגירה</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ SCRIPT ════ -->
+
+<!-- EXPORT TASKS MODAL -->
+<div class="modal-overlay" id="modal-export-tasks">
+  <div class="modal">
+    <div class="modal-title">📄 ייצוא משימות לקובץ</div>
+    <div class="form-row">
+      <div class="form-group"><label>לקוח</label><select id="exp-client"><option value="">כל הלקוחות</option></select></div>
+      <div class="form-group"><label>תיק</label><select id="exp-case"><option value="">כל התיקים</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>תזכורת מ-</label><input id="exp-reminder-from" type="date" dir="ltr"></div>
+      <div class="form-group"><label>תזכורת עד</label><input id="exp-reminder-to" type="date" dir="ltr"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>תאריך אחרון מ-</label><input id="exp-due-from" type="date" dir="ltr"></div>
+      <div class="form-group"><label>תאריך אחרון עד</label><input id="exp-due-to" type="date" dir="ltr"></div>
+    </div>
+    <div class="form-group"><label>סטטוס</label>
+      <select id="exp-status">
+        <option value="open">פתוחות בלבד</option>
+        <option value="all">הכל</option>
+        <option value="done">הושלמו בלבד</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="exportTasksCSV()">📄 ייצוא CSV</button>
+      <button class="btn btn-ghost" onclick="closeModal('export-tasks')">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ STATE ══
+let DB = {
+  clients:[],cases:[],tasks:[],events:[],charges:[],_id:1
+};
+let calY = new Date().getFullYear();
+let calM = new Date().getMonth();
+let currentView = 'dashboard';
+let profileClientId = null;
+
+// ══ PERSIST ══
+const STORE_KEY = 'lm_v3';
+// ══ FIREBASE ══
+// ====================================================
+// הוראות התקנה — החלף את הערכים הבאים בפרטי Firebase שלך
+// 1. היכנס ל: https://firebase.google.com
+// 2. צור פרויקט חדש
+// 3. לך ל: Project Settings > Your apps > Web app
+// 4. העתק את פרטי ה-firebaseConfig והדבק כאן
+// ====================================================
+const firebaseConfig = {
+  apiKey: "הכנס-כאן-את-ה-apiKey-שלך",
+  authDomain: "הכנס-כאן-את-ה-authDomain-שלך",
+  projectId: "הכנס-כאן-את-ה-projectId-שלך",
+  storageBucket: "הכנס-כאן-את-ה-storageBucket-שלך",
+  messagingSenderId: "הכנס-כאן-את-ה-messagingSenderId-שלך",
+  appId: "הכנס-כאן-את-ה-appId-שלך"
+};
+// ====================================================
+firebase.initializeApp(firebaseConfig);
+const fsDb = firebase.firestore();
+const DOC_REF = fsDb.collection('office').doc('data');
+let _syncTimeout = null;
+let _syncBadge = null;
+
+function showSyncBadge(msg, color){
+  if(!_syncBadge){
+    _syncBadge = document.createElement('div');
+    _syncBadge.style.cssText = 'position:fixed;bottom:20px;left:20px;padding:8px 16px;border-radius:20px;font-size:12px;font-weight:600;z-index:9999;direction:rtl;transition:opacity .4s;box-shadow:0 2px 12px rgba(0,0,0,.15);';
+    document.body.appendChild(_syncBadge);
+  }
+  _syncBadge.style.background = color==='ok' ? '#1e6e40' : color==='err' ? '#b83a4a' : '#1a3a6e';
+  _syncBadge.style.color = '#fff';
+  _syncBadge.style.opacity = '1';
+  _syncBadge.textContent = msg;
+  clearTimeout(_syncBadge._t);
+  _syncBadge._t = setTimeout(()=>{ _syncBadge.style.opacity='0'; }, 2500);
+}
+
+async function cloudSave(){
+  try{
+    const data = JSON.parse(JSON.stringify(DB));
+    await DOC_REF.set(data);
+    showSyncBadge('☁️ נשמר', 'ok');
+  }catch(e){
+    showSyncBadge('⚠️ שגיאת ענן', 'err');
+  }
+}
+
+async function cloudLoad(){
+  try{
+    showSyncBadge('☁️ מסנכרן...', 'info');
+    const snap = await DOC_REF.get();
+    if(snap.exists){
+      const data = snap.data();
+      if(!data._id) data._id = 1;
+      DB = data;
+      try{localStorage.setItem(STORE_KEY, JSON.stringify(DB));}catch(e){}
+      renderDashboard(); renderCalendar(); updateBadge();
+      showSyncBadge('☁️ מסונכרן', 'ok');
+    } else {
+      await cloudSave();
+    }
+  }catch(e){
+    showSyncBadge('⚠️ ללא ענן — נתונים מקומיים', 'err');
+  }
+}
+
+let _autoSaveHandle = null;
+let _iCloudFileHandle = null;
+
+function dbSave(){
+  try{localStorage.setItem(STORE_KEY,JSON.stringify(DB));}catch(e){}
+  if(gdriveToken) setTimeout(gdriveSave,500);
+  if(_iCloudFileHandle){
+    clearTimeout(_autoSaveHandle);
+    _autoSaveHandle = setTimeout(()=>_writeToFile(_iCloudFileHandle), 1500);
+  }
+  // sync to cloud - debounced
+  clearTimeout(_syncTimeout);
+  _syncTimeout = setTimeout(cloudSave, 1500);
+}
+
+async function _writeToFile(handle){
+  try{
+    const writable = await handle.createWritable();
+    await writable.write(JSON.stringify(DB,null,2));
+    await writable.close();
+    const bar = document.getElementById('sync-status-bar');
+    const txt = document.getElementById('sync-status-text');
+    if(bar && txt){
+      bar.style.display='flex';
+      txt.textContent='נשמר אוטומטית · '+new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+    }
+  }catch(e){ console.log('auto-save error',e); }
+}
+
+async function exportToiCloud(){
+  try{
+    const handle = await window.showSaveFilePicker({
+      suggestedName:'legal-manager-data.json',
+      types:[{description:'JSON',accept:{'application/json':['.json']}}]
+    });
+    _iCloudFileHandle = handle;
+    await _writeToFile(handle);
+    const bar = document.getElementById('sync-status-bar');
+    if(bar) bar.style.display='flex';
+    alert('✅ הקובץ נשמר!\n\nחשוב: שמרי אותו בתיקיית iCloud Drive\nמעכשיו כל שינוי יישמר אוטומטית לאותו קובץ.');
+    closeModal('backup');
+  }catch(e){
+    if(e.name !== 'AbortError') exportJSON();
+  }
+}
+function dbLoad(){
+  try{const d=localStorage.getItem(STORE_KEY);if(d)DB=JSON.parse(d);}catch(e){}
+}
+function uid(){return DB._id++;}
+
+// ══ HELPERS ══
+function today(){return new Date().toISOString().split('T')[0];}
+function fdate(d){if(!d)return'—';const[y,m,dd]=d.split('-');return`${dd}.${m}.${y}`;}
+function ftime(t){if(!t)return'';return`<span dir="ltr">${t.substring(0,5)}</span>`;}
+function clientName(id){const c=DB.clients.find(x=>x.id==id);return c?c.name:'—';}
+function caseName(id){const c=DB.cases.find(x=>x.id==id);return c?c.name:'—';}
+function initials(name){if(!name)return'?';const p=name.trim().split(' ');return(p[0][0]+(p[1]?p[1][0]:'')).toUpperCase();}
+function isOverdue(d){return d&&d<today();}
+
+function vatRate(){return(DB.vatRate||18)/100;}
+function withVat(n){return Math.round(n*(1+vatRate()));}
+
+
+function statusTag(s){
+  const m={active:'tag-active פעיל',closed:'tag-closed סגור',pending:'tag-pending ממתין',
+    urgent:'tag-urgent דחוף',paid:'tag-paid שולם',unpaid:'tag-unpaid לא שולם',partial:'tag-partial חלקי'};
+  const v=m[s]||s;const[cls,...words]=v.split(' ');
+  return`<span class="tag ${cls}">${words.join(' ')}</span>`;
+}
+function prioLabel(p){
+  if(p==='high')return'<span class="priority-high">גבוהה ↑</span>';
+  if(p==='med')return'<span class="priority-med">בינונית</span>';
+  return'<span class="priority-low">נמוכה</span>';
+}
+
+function fillCaseSelect(selId,clientId){
+  const sel=document.getElementById(selId);
+  if(!sel)return;
+  const prev=sel.value;
+  sel.innerHTML='<option value="">— ללא —</option>';
+  let cases=DB.cases;
+  if(clientId)cases=cases.filter(c=>c.clientId==clientId);
+  cases.forEach(c=>sel.innerHTML+=`<option value="${c.id}">${c.name}</option>`);
+  if(prev)sel.value=prev;
+}
+function fillClientSelect(selId){
+  const sel=document.getElementById(selId);
+  if(!sel)return;
+  const prev=sel.value;
+  sel.innerHTML='<option value="">— בחר לקוח —</option>';
+  DB.clients.forEach(c=>sel.innerHTML+=`<option value="${c.id}">${c.name}</option>`);
+  if(prev)sel.value=prev;
+}
+
+// ══ NAV ══
+const PAGE_TITLES={
+  dashboard:['מסך הבית','סקירה כללית'],
+  clients:['לקוחות','ניהול לקוחות'],
+  'client-profile':['פרופיל לקוח',''],
+  'case-profile':['תיק',''],search:['חיפוש','חיפוש מתקדם'],
+  cases:['תיקים','ניהול תיקים'],
+  tasks:['משימות','ניהול משימות'],
+  calendar:['יומן','אירועים ומועדים'],
+  charges:['חיובים','ניהול חיובים']
+};
+
+function navTo(view){
+  currentView=view;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  const vEl=document.getElementById('view-'+view);if(!vEl)return;vEl.classList.add('active');
+  const[t,s]=PAGE_TITLES[view]||[view,''];
+  document.getElementById('dt-title').textContent=t;
+  document.getElementById('dt-sub').textContent=s;
+  document.getElementById('mob-title').textContent=t;
+  document.querySelectorAll('#sidebar .nav-item').forEach(el=>{
+    el.classList.toggle('active',el.dataset.view===view);
+  });
+  document.querySelectorAll('.mni').forEach(el=>{
+    el.classList.toggle('active',el.dataset.view===view);
+  });
+  const addBtn=document.getElementById('mob-add');
+  addBtn.style.display=(view==='dashboard'||view==='client-profile'||view==='case-profile')?'none':'inline-flex';
+  // render
+  const renders={
+    dashboard:renderDashboard,
+    clients:renderClients,
+    cases:renderCases,
+    tasks:renderTasks,
+    calendar:renderCalendar,
+    charges:renderCharges
+  };
+  if(renders[view])renders[view]();
+}
+
+// sidebar nav items
+document.querySelectorAll('#sidebar .nav-item').forEach(el=>{
+  el.addEventListener('click',()=>navTo(el.dataset.view));
+});
+// mobile nav items
+document.querySelectorAll('.mni').forEach(el=>{
+  el.addEventListener('click',()=>navTo(el.dataset.view));
+});
+
+function mobileAdd(){
+  const map={
+    clients:()=>openModal('client'),
+    cases:()=>openNewCase(),
+    tasks:()=>openNewTask(),
+    calendar:()=>openNewEvent(),
+    charges:()=>openNewCharge()
+  };
+  if(map[currentView])map[currentView]();
+}
+
+// ══ MODALS ══
+function openModal(type){
+  if(type==='settings'){openModal_settings();return;}
+  if(type==='case'){
+    fillClientSelect('mcs-client');
+    fillCaseTypeSelect();
+    // fill referrer select
+    const rsel=document.getElementById('mcs-referrer');
+    if(rsel){
+      const prev=rsel.value;
+      rsel.innerHTML='<option value="">— בחרי גורם מפנה —</option>';
+      (DB.referrers||[]).forEach(r=>rsel.innerHTML+=`<option value="${r}">${r}</option>`);
+      if(prev)rsel.value=prev;
+    }
+  }
+  if(type==='task')fillCaseSelect('mt-case');
+  if(type==='event')fillCaseSelect('mev-case');
+  if(type==='charge'){fillClientSelect('mch-client');fillCaseSelect('mch-case');fillChargeTemplateSelect();}
+  document.getElementById('modal-'+type).classList.add('open');
+}
+
+function fillReferrerSelect(selId){
+  const sel=document.getElementById(selId);if(!sel)return;
+  const prev=sel.value;
+  sel.innerHTML='<option value="">— בחרי גורם מפנה —</option>';
+  (DB.referrers||[]).forEach(r=>sel.innerHTML+=`<option value="${r}">${r}</option>`);
+  if(prev)sel.value=prev;
+}
+function closeModal(type){
+  document.getElementById('modal-'+type).classList.remove('open');
+}
+document.querySelectorAll('.modal-overlay').forEach(el=>{
+  el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');});
+});
+
+// ══ BADGE ══
+function updateBadge(){
+  const n=DB.tasks.filter(t=>!t.done).length;
+  document.getElementById('sb-badge').textContent=n;
+  const mb=document.getElementById('mob-badge');
+  mb.textContent=n;mb.style.display=n>0?'inline-block':'none';
+}
+
+// ══ CLIENTS ══
+function saveClient(){
+  const firstName=document.getElementById('mc-firstname').value.trim();
+  const lastName=document.getElementById('mc-lastname').value.trim();
+  if(!firstName&&!lastName){alert('יש להזין שם פרטי או שם משפחה');return;}
+  const name=(firstName+' '+lastName).trim();
+  const eid=document.getElementById('mc-id').value;
+  const obj={
+    id:eid||uid(),name,
+    idNum:document.getElementById('mc-idnum').value,
+    phone:document.getElementById('mc-phone').value,
+    email:document.getElementById('mc-email').value,
+    addr:document.getElementById('mc-addr').value,
+    notes:document.getElementById('mc-notes').value,
+    created:today()
+  };
+  if(eid){const i=DB.clients.findIndex(c=>c.id==eid);DB.clients[i]=obj;}
+  else DB.clients.push(obj);
+  dbSave();closeModal('client');
+  document.getElementById('mc-id').value='';
+  ['mc-firstname','mc-lastname','mc-idnum','mc-phone','mc-email','mc-addr','mc-notes'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  document.getElementById('mc-title').textContent='👤 לקוח חדש';
+  if(currentView==='clients')renderClients();
+  else if(currentView==='client-profile')renderProfile(obj.id);
+  renderDashboard();
+}
+
+function editClient(id){
+  const c=DB.clients.find(x=>x.id==id);if(!c)return;
+  document.getElementById('mc-title').textContent='✏️ עריכת לקוח';
+  document.getElementById('mc-id').value=c.id;
+  const nameParts=(c.name||'').trim().split(' ');
+  document.getElementById('mc-firstname').value=nameParts.slice(0,-1).join(' ')||c.name||'';
+  document.getElementById('mc-lastname').value=nameParts.length>1?nameParts[nameParts.length-1]:'';
+  document.getElementById('mc-idnum').value=c.idNum||'';
+  document.getElementById('mc-phone').value=c.phone||'';
+  document.getElementById('mc-email').value=c.email||'';
+  document.getElementById('mc-addr').value=c.addr||'';
+  document.getElementById('mc-notes').value=c.notes||'';
+  document.getElementById('modal-client').classList.add('open');
+}
+
+function deleteClient(id){
+  if(!confirm('למחוק לקוח זה?'))return;
+  DB.clients=DB.clients.filter(c=>c.id!=id);
+  dbSave();renderClients();renderDashboard();
+}
+
+function openProfile(id){
+  profileClientId=id;
+  renderProfile(id);
+  navTo('client-profile');
+}
+
+function renderProfile(id){
+  const c=DB.clients.find(x=>x.id==id);if(!c)return;
+  document.getElementById('prof-avatar').textContent=initials(c.name);
+  document.getElementById('prof-name').textContent=c.name;
+  const details=[];
+  if(c.idNum)details.push('🪪 '+c.idNum);
+  if(c.phone)details.push('📞 '+c.phone);
+  if(c.email)details.push('✉️ '+c.email);
+  if(c.addr)details.push('📍 '+c.addr);
+  document.getElementById('prof-details').innerHTML=details.map(d=>`<span>${d}</span>`).join('');
+  document.getElementById('prof-edit-btn').onclick=()=>editClient(c.id);
+  // tabs
+  const clientCases=DB.cases.filter(cs=>cs.clientId==id);
+  document.getElementById('prof-cases-tbody').innerHTML=clientCases.length
+    ?clientCases.map(cs=>`<tr>
+      <td>${cs.num||'—'}</td>
+      <td><span class="case-row-link" onclick="openCaseProfile(${cs.id})">${cs.name}</span></td>
+      <td>${cs.type}</td><td>${statusTag(cs.status)}</td>
+      <td>${fdate(cs.date)}</td>
+      <td><div style="display:flex;gap:6px;">
+        <button class="btn btn-ghost btn-xs" onclick="openCaseProfile(${cs.id})">📂</button>
+        <button class="btn btn-ghost btn-xs" onclick="editCase(${cs.id})">✏️</button>
+      </div></td>
+    </tr>`).join('')
+    :'<tr><td colspan="6"><div class="empty"><div class="empty-icon">📁</div><div class="empty-text">אין תיקים</div></div></td></tr>';
+
+  const clientCharges=DB.charges.filter(ch=>ch.clientId==id);
+  document.getElementById('prof-charges-tbody').innerHTML=clientCharges.length
+    ?clientCharges.map(ch=>`<tr>
+      <td>${ch.desc}</td>
+      <td><span class="amount">₪${Number(ch.amount).toLocaleString()}</span></td>
+      <td>${fdate(ch.date)}</td>
+      <td><select class="qs-select" onchange="quickChargeStatus(${ch.id},this.value)">
+        <option value="unpaid"${ch.status==='unpaid'?' selected':''}>לא שולם</option>
+        <option value="partial"${ch.status==='partial'?' selected':''}>חלקי</option>
+        <option value="paid"${ch.status==='paid'?' selected':''}>שולם</option>
+      </select></td>
+      <td><button class="btn btn-ghost btn-xs" onclick="editCharge(${ch.id})">✏️</button></td>
+    </tr>`).join('')
+    :'<tr><td colspan="5"><div class="empty"><div class="empty-icon">💰</div><div class="empty-text">אין חיובים</div></div></td></tr>';
+
+  // tasks by cases of this client
+  const caseIds=clientCases.map(cs=>cs.id.toString());
+  const clientTasks=DB.tasks.filter(t=>caseIds.includes(t.caseId?.toString()));
+  document.getElementById('prof-tasks-tbody').innerHTML=clientTasks.length
+    ?clientTasks.map(t=>`<tr class="${t.done?'task-done':''}">
+      <td><input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${t.id})" style="accent-color:var(--accent)"></td>
+      <td><strong>${t.title}</strong></td><td>${caseName(t.caseId)}</td>
+      <td>${t.due?`<span style="color:${isOverdue(t.due)&&!t.done?'var(--danger)':'inherit'}">${fdate(t.due)}</span>`:'—'}</td>
+      <td>${prioLabel(t.prio)}</td>
+    </tr>`).join('')
+    :'<tr><td colspan="5"><div class="empty"><div class="empty-icon">✅</div><div class="empty-text">אין משימות</div></div></td></tr>';
+}
+
+// profile tabs
+document.querySelectorAll('.ptab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.ptab-content').forEach(c=>c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab).classList.add('active');
+  });
+});
+
+function renderClients(filter){
+  const grid=document.getElementById('clients-grid');
+  let list=DB.clients;
+  if(filter){const q=filter.toLowerCase();list=list.filter(c=>c.name.toLowerCase().includes(q)||(c.phone||'').includes(q)||(c.email||'').toLowerCase().includes(q));}
+  if(!list.length){grid.innerHTML='<div class="empty"><div class="empty-icon">👤</div><div class="empty-text">אין לקוחות עדיין</div></div>';return;}
+  grid.innerHTML=list.map(c=>{
+    const n=DB.cases.filter(cs=>cs.clientId==c.id).length;
+    return`<div class="client-card" onclick="openProfile(${c.id})">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div class="cc-name">${c.name}</div>
+          <div class="cc-id">${c.idNum?'ת.ז. '+c.idNum:''}</div>
+        </div>
+        <div style="background:rgba(201,168,76,.12);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--accent);">${initials(c.name)}</div>
+      </div>
+      <div class="cc-meta">
+        ${c.phone?`<span>📞 ${c.phone}</span>`:''}
+        ${c.email?`<span>✉️ ${c.email}</span>`:''}
+        <span>📁 ${n} תיקים</span>
+      </div>
+      <div class="cc-actions">
+        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();editClient(${c.id})">✏️ עריכה</button>
+        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openNewCase()" style="margin-right:auto">+ תיק</button>
+        <button class="btn btn-danger-soft btn-xs" onclick="event.stopPropagation();deleteClient(${c.id})">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══ CASE PROFILE ══
+let activeCaseId = null;
+
+function openCaseProfile(id) {
+  activeCaseId = id;
+  renderCaseProfile(id);
+  navTo('case-profile');
+}
+
+function renderCaseProfile(id) {
+  const c = DB.cases.find(x => x.id == id); if (!c) return;
+  document.getElementById('cp-num').textContent = c.num ? 'תיק מס׳ ' + c.num : '';
+  document.getElementById('cp-name').textContent = c.name;
+  const meta = [];
+  meta.push('👤 ' + clientName(c.clientId));
+  meta.push('⚖️ ' + c.type + (c.subtype ? ' · ' + c.subtype : ''));
+  if (c.court) meta.push('🏛 ' + c.court);
+  if(c.referrer)meta.push('📨 '+c.referrer);
+  if (c.date) meta.push('📅 נפתח ' + fdate(c.date));
+  if(c.updated)meta.push('🔄 עודכן '+fdate(c.updated));
+  if(c.closeDate)meta.push('🔒 נסגר '+fdate(c.closeDate));
+  if(c.extraId)meta.push('🔖 '+c.extraId);
+  meta.push(statusTag(c.status));
+  document.getElementById('cp-meta').innerHTML = meta.map(m => `<span>${m}</span>`).join('');
+  document.getElementById('cp-edit-btn').onclick = () => editCase(id);
+
+  // Log
+  const logs = (c.log || []).slice().sort((a, b) => b.date.localeCompare(a.date));
+  const logEl = document.getElementById('cp-log-list');
+  if (!logs.length) {
+    logEl.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">טרם נרשמו פעולות בתיק זה</div></div>';
+  } else {
+    const typeLabels = {general:'כללי',filing:'הגשת כתב',hearing:'דיון',decision:'החלטה',correspondence:'התכתבות',research:'מחקר',other:'אחר'};
+    logEl.innerHTML = logs.map(entry => `
+      <div class="log-entry">
+        <div class="log-entry-date">${fdate(entry.date)} · <span style="color:var(--accent)">${typeLabels[entry.type]||entry.type}</span></div>
+        <div class="log-entry-text">${escHtml(entry.text)}</div>
+        <div class="log-entry-actions">
+          <button class="btn btn-ghost btn-xs" onclick="editLogEntry(${id},'${entry.id}')" title="עריכה">✏️</button>
+          <button class="btn btn-danger-soft btn-xs" onclick="deleteLogEntry(${id},'${entry.id}')" title="מחיקה">🗑</button>
+        </div>
+      </div>`).join('');
+  }
+
+  // Hearings
+  renderCaseHearings(c);
+  // Meetings
+  renderCaseMeetings(c);
+  // Tasks
+  const caseTasks = DB.tasks.filter(t => t.caseId == id);
+  const ctbody = document.getElementById('cp-tasks-tbody');
+  ctbody.innerHTML = caseTasks.length ? caseTasks.map(t => `<tr class="${t.done?'task-done':''}">
+    <td><input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${t.id})" style="accent-color:var(--accent);width:15px;height:15px;"></td>
+    <td><strong>${t.title}</strong></td>
+    <td>${t.reminder?`<span style="color:${isOverdue(t.reminder)&&!t.done?'var(--danger)':'var(--text2)'};">${fdate(t.reminder)}</span>`:'—'}</td>
+    <td>${t.due?`<span style="color:${isOverdue(t.due)&&!t.done?'var(--danger)':'inherit'}">${fdate(t.due)}</span>`:'—'}</td>
+    <td>${prioLabel(t.prio)}</td>
+    <td><button class="btn btn-ghost btn-xs" onclick="editTask(${t.id})">✏️</button>
+      <button class="btn btn-danger-soft btn-xs" onclick="deleteTask(${t.id})" title="מחיקה">🗑</button></td>
+  </tr>`).join('')
+  : '<tr><td colspan="5"><div class="empty" style="padding:24px;"><div class="empty-icon" style="font-size:28px;">✅</div><div class="empty-text">אין משימות</div></div></td></tr>';
+
+  // Charges
+  const caseCharges = DB.charges.filter(ch => ch.caseId == id);
+  const ccbody = document.getElementById('cp-charges-tbody');
+  ccbody.innerHTML = caseCharges.length ? caseCharges.map(ch => `<tr>
+    <td>${ch.desc}</td>
+    <td><span class="amount">₪${Number(ch.amount).toLocaleString()}</span></td>
+    <td>${fdate(ch.date)}</td>
+    <td><select class="qs-select" onchange="quickChargeStatus(${ch.id},this.value)">
+      <option value="unpaid"${ch.status==='unpaid'?' selected':''}>לא שולם</option>
+      <option value="partial"${ch.status==='partial'?' selected':''}>חלקי</option>
+      <option value="paid"${ch.status==='paid'?' selected':''}>שולם</option>
+    </select></td>
+    <td><div style="display:flex;gap:5px;">
+      <button class="btn btn-ghost btn-xs" onclick="duplicateCharge(${ch.id})" title="שכפול">⧉</button>
+      <button class="btn btn-ghost btn-xs" onclick="editCharge(${ch.id})">✏️</button>
+      <button class="btn btn-danger-soft btn-xs" onclick="deleteCharge(${ch.id})">🗑</button>
+    </div></td>
+  </tr>`).join('')
+  : '<tr><td colspan="5"><div class="empty" style="padding:24px;"><div class="empty-icon" style="font-size:28px;">💰</div><div class="empty-text">אין חיובים</div></div></td></tr>';
+
+  // ── סיכום חיובים לתיק ──
+  const totalAll    = caseCharges.reduce((s,ch)=>s+Number(ch.amount),0);
+  const totalPaid   = caseCharges.filter(ch=>ch.status==='paid').reduce((s,ch)=>s+Number(ch.amount),0);
+  const totalUnpaid = caseCharges.filter(ch=>ch.status!=='paid').reduce((s,ch)=>s+Number(ch.amount),0);
+  const summEl = document.getElementById('cp-charges-summary');
+  if(summEl){
+    if(caseCharges.length){
+      summEl.style.display='block';
+      summEl.innerHTML=`<div style="display:flex;gap:20px;flex-wrap:wrap;font-size:13px;padding:12px 16px;background:var(--surface2);border-radius:10px;margin-top:12px;">
+        <div><span style="color:var(--text3);font-size:11px;font-weight:700;display:block;margin-bottom:2px;">סה״כ</span><strong style="font-size:16px;">&#x20AA;${totalAll.toLocaleString()}</strong></div>
+        <div style="width:1px;background:var(--border);"></div>
+        <div><span style="color:var(--text3);font-size:11px;font-weight:700;display:block;margin-bottom:2px;">שולם</span><strong style="font-size:16px;color:var(--success);">&#x20AA;${totalPaid.toLocaleString()}</strong></div>
+        <div style="width:1px;background:var(--border);"></div>
+        <div><span style="color:var(--text3);font-size:11px;font-weight:700;display:block;margin-bottom:2px;">לגבייה</span><strong style="font-size:16px;color:var(--danger);">&#x20AA;${totalUnpaid.toLocaleString()}</strong></div>
+      </div>`;
+    } else {
+      summEl.style.display='none';
+    }
+  }
+}
+
+function renderCaseHearings(c) {
+  const hearings = [...(c.hearings || [])].sort((a, b) => (a.date + (a.time||'')).localeCompare(b.date + (b.time||'')));
+  const el = document.getElementById('cp-hearings-list');
+  if (!hearings.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🏛</div><div class="empty-text">לא הוגדרו מועדי דיון</div></div>'; return; }
+  const td = today();
+  el.innerHTML = hearings.map(h => {
+    const isPast = h.date < td;
+    const isNext = !isPast && hearings.find(x => x.date >= td) === h;
+    const parts = h.date.split('-');
+    return `<div class="cev-item ${isPast?'cev-past':''} ${isNext?'cev-next':''}">
+      <div class="cev-date-block">
+        <div class="cev-month">${HM[parseInt(parts[1])-1]}</div>
+        <div class="cev-day">${parseInt(parts[2])}</div>
+        <div style="font-size:10px;color:var(--text3);">${parts[0]}</div>
+      </div>
+      <div class="cev-info">
+        <div class="cev-title">${escHtml(h.title)}</div>
+        <div class="cev-sub">${h.time?ftime(h.time)+' · ':''}${h.loc?h.loc+' · ':''}${h.judge?'כב׳ '+escHtml(h.judge):''}${h.notes?`<br><span style="color:var(--text3)">${escHtml(h.notes)}</span>`:''}</div>
+      </div>
+      <div style="display:flex;gap:4px;flex-shrink:0;">
+        <button class="btn btn-ghost btn-xs" onclick="duplicateHearing('${h.id}')" title="שכפול דיון">⧉</button>
+        <button class="btn btn-ghost btn-xs" onclick="editHearing('${h.id}')">✏️</button>
+        <button class="btn btn-danger-soft btn-xs" onclick="deleteHearingById('${h.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCaseMeetings(c) {
+  const meetings = [...(c.meetings || [])].sort((a, b) => (a.date + (a.time||'')).localeCompare(b.date + (b.time||'')));
+  const el = document.getElementById('cp-meetings-list');
+  if (!meetings.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🤝</div><div class="empty-text">לא נקבעו פגישות</div></div>'; return; }
+  const td = today();
+  el.innerHTML = meetings.map(m => {
+    const isPast = m.date < td;
+    const isNext = !isPast && meetings.find(x => x.date >= td) === m;
+    const parts = m.date.split('-');
+    return `<div class="cev-item ${isPast?'cev-past':''} ${isNext?'cev-next':''}">
+      <div class="cev-date-block">
+        <div class="cev-month">${HM[parseInt(parts[1])-1]}</div>
+        <div class="cev-day">${parseInt(parts[2])}</div>
+        <div style="font-size:10px;color:var(--text3);">${parts[0]}</div>
+      </div>
+      <div class="cev-info">
+        <div class="cev-title">${escHtml(m.title)}</div>
+        <div class="cev-sub">${m.time?ftime(m.time):''}${m.endTime?' — '+ftime(m.endTime):''}${m.loc?' · '+escHtml(m.loc):''}${m.notes?`<br><span style="color:var(--text3)">${escHtml(m.notes)}</span>`:''}</div>
+      </div>
+      <div style="display:flex;gap:4px;flex-shrink:0;">
+        <button class="btn btn-ghost btn-xs" onclick="editMeeting('${m.id}')">✏️</button>
+        <button class="btn btn-danger-soft btn-xs" onclick="deleteMeetingById('${m.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Case tabs
+document.querySelectorAll('[data-ctab]').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('[data-ctab]').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.ctab-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.ctab).classList.add('active');
+  });
+});
+
+// ══ LOG ENTRIES ══
+function openLogEntry(id) {
+  document.getElementById('ml-title').textContent = '📋 הוספת פעולה';
+  document.getElementById('ml-id').value = '';
+  document.getElementById('ml-caseid').value = activeCaseId;
+  document.getElementById('ml-date').value = today();
+  document.getElementById('ml-text').value = '';
+  document.getElementById('ml-type').value = 'general';
+  document.getElementById('modal-log').classList.add('open');
+}
+
+function saveLogEntry() {
+  const text = document.getElementById('ml-text').value.trim();
+  const date = document.getElementById('ml-date').value;
+  if (!text || !date) { alert('תאריך ותיאור חובה'); return; }
+  const cid = document.getElementById('ml-caseid').value;
+  const c = DB.cases.find(x => x.id == cid); if (!c) return;
+  if (!c.log) c.log = [];
+  const eid = document.getElementById('ml-id').value;
+  if (eid) {
+    const entry = c.log.find(e => e.id === eid);
+    if (entry) { entry.text = text; entry.date = date; entry.type = document.getElementById('ml-type').value; }
+  } else {
+    c.log.push({ id: 'l' + uid(), date, type: document.getElementById('ml-type').value, text });
+  }
+  dbSave(); closeModal('log'); renderCaseProfile(cid);
+}
+
+function editLogEntry(caseId, logId) {
+  const c = DB.cases.find(x => x.id == caseId); if (!c) return;
+  const entry = (c.log || []).find(e => e.id === logId); if (!entry) return;
+  document.getElementById('ml-title').textContent = '✏️ עריכת פעולה';
+  document.getElementById('ml-id').value = logId;
+  document.getElementById('ml-caseid').value = caseId;
+  document.getElementById('ml-date').value = entry.date;
+  document.getElementById('ml-type').value = entry.type;
+  document.getElementById('ml-text').value = entry.text;
+  openModal('log');
+}
+
+function deleteLogEntry(caseId, logId) {
+  if (!confirm('למחוק פעולה זו?')) return;
+  const c = DB.cases.find(x => x.id == caseId); if (!c) return;
+  c.log = (c.log || []).filter(e => e.id !== logId);
+  dbSave(); renderCaseProfile(caseId);
+}
+
+// ══ HEARINGS ══
+function openCaseHearingModal() {
+  document.getElementById('mh-title').textContent = '🏛 דיון חדש';
+  document.getElementById('mh-id').value = '';
+  document.getElementById('mh-caseid').value = activeCaseId;
+  ['mh-title-inp','mh-time','mh-loc','mh-judge','mh-notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('mh-date').value = '';
+  document.getElementById('mh-add-cal').checked = false;
+  document.getElementById('mh-del-btn').style.display = 'none';
+  document.getElementById('modal-hearing').classList.add('open');
+}
+
+function duplicateHearing(hid) {
+  const c = DB.cases.find(x => x.id == activeCaseId); if (!c) return;
+  const h = (c.hearings || []).find(x => x.id === hid); if (!h) return;
+  document.getElementById('mh-title').textContent = '⧉ שכפול דיון';
+  document.getElementById('mh-id').value = '';
+  document.getElementById('mh-caseid').value = activeCaseId;
+  document.getElementById('mh-title-inp').value = h.title;
+  document.getElementById('mh-date').value = '';
+  document.getElementById('mh-time').value = h.time || '';
+  document.getElementById('mh-loc').value = h.loc || '';
+  document.getElementById('mh-judge').value = h.judge || '';
+  document.getElementById('mh-notes').value = h.notes || '';
+  document.getElementById('mh-add-cal').checked = false;
+  document.getElementById('mh-del-btn').style.display = 'none';
+  openModal('hearing');
+}
+
+function editHearing(hid) {
+  const c = DB.cases.find(x => x.id == activeCaseId); if (!c) return;
+  const h = (c.hearings || []).find(x => x.id === hid); if (!h) return;
+  document.getElementById('mh-title').textContent = '✏️ עריכת דיון';
+  document.getElementById('mh-id').value = hid;
+  document.getElementById('mh-caseid').value = activeCaseId;
+  document.getElementById('mh-title-inp').value = h.title;
+  document.getElementById('mh-date').value = h.date;
+  document.getElementById('mh-time').value = h.time || '';
+  document.getElementById('mh-loc').value = h.loc || '';
+  document.getElementById('mh-judge').value = h.judge || '';
+  document.getElementById('mh-notes').value = h.notes || '';
+  document.getElementById('mh-add-cal').checked = false;
+  document.getElementById('mh-del-btn').style.display = 'inline-flex';
+  document.getElementById('modal-hearing').classList.add('open');
+}
+
+function saveHearing() {
+  const title = document.getElementById('mh-title-inp').value.trim();
+  const date = document.getElementById('mh-date').value;
+  if (!title || !date) { alert('תיאור ותאריך חובה'); return; }
+  const cid = document.getElementById('mh-caseid').value;
+  const c = DB.cases.find(x => x.id == cid); if (!c) return;
+  if (!c.hearings) c.hearings = [];
+  const eid = document.getElementById('mh-id').value;
+  const obj = {
+    id: eid || ('h' + uid()), title, date,
+    time: document.getElementById('mh-time').value,
+    loc: document.getElementById('mh-loc').value,
+    judge: document.getElementById('mh-judge').value,
+    notes: document.getElementById('mh-notes').value
+  };
+  if (eid) { const i = c.hearings.findIndex(h => h.id === eid); c.hearings[i] = obj; }
+  else c.hearings.push(obj);
+  // Add to calendar?
+  if (document.getElementById('mh-add-cal').checked) {
+    DB.events.push({ id: uid(), title: '🏛 ' + title + ' — ' + c.name, date, time: obj.time, endTime: '', caseId: cid, loc: obj.loc, notes: obj.notes || '' });
+  }
+  dbSave(); closeModal('hearing'); renderCaseProfile(cid);
+  // Ask about billing reminder
+  if (confirm(`האם להוסיף משימת תזכורת לרשום חיוב עבור דיון זה?\n\n"${title}"\n${fdate(date)}`)) {
+    DB.tasks.push({
+      id: uid(),
+      title: `💰 לרשום חיוב — ${title} (${fdate(date)})`,
+      caseId: String(cid),
+      prio: 'high',
+      due: date,
+      notes: `תזכורת לרשום חיוב עבור: ${title}`,
+      done: false
+    });
+    dbSave(); updateBadge(); renderDashboard();
+  }
+}
+
+function deleteHearing() { deleteHearingById(document.getElementById('mh-id').value); closeModal('hearing'); }
+function deleteHearingById(hid) {
+  if (!confirm('למחוק דיון זה?')) return;
+  const c = DB.cases.find(x => x.id == activeCaseId); if (!c) return;
+  c.hearings = (c.hearings || []).filter(h => h.id !== hid);
+  dbSave(); renderCaseProfile(activeCaseId);
+}
+
+// ══ MEETINGS ══
+function openCaseMeetingModal() {
+  document.getElementById('mm-title').textContent = '🤝 פגישה חדשה';
+  document.getElementById('mm-id').value = '';
+  document.getElementById('mm-caseid').value = activeCaseId;
+  ['mm-title-inp','mm-time','mm-endtime','mm-loc','mm-notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('mm-date').value = '';
+  document.getElementById('mm-add-cal').checked = false;
+  document.getElementById('mm-del-btn').style.display = 'none';
+  document.getElementById('modal-meeting').classList.add('open');
+}
+
+function editMeeting(mid) {
+  const c = DB.cases.find(x => x.id == activeCaseId); if (!c) return;
+  const m = (c.meetings || []).find(x => x.id === mid); if (!m) return;
+  document.getElementById('mm-title').textContent = '✏️ עריכת פגישה';
+  document.getElementById('mm-id').value = mid;
+  document.getElementById('mm-caseid').value = activeCaseId;
+  document.getElementById('mm-title-inp').value = m.title;
+  document.getElementById('mm-date').value = m.date;
+  document.getElementById('mm-time').value = m.time || '';
+  document.getElementById('mm-endtime').value = m.endTime || '';
+  document.getElementById('mm-loc').value = m.loc || '';
+  document.getElementById('mm-notes').value = m.notes || '';
+  document.getElementById('mm-add-cal').checked = false;
+  document.getElementById('mm-del-btn').style.display = 'inline-flex';
+  document.getElementById('modal-meeting').classList.add('open');
+}
+
+function saveMeeting() {
+  const title = document.getElementById('mm-title-inp').value.trim();
+  const date = document.getElementById('mm-date').value;
+  if (!title || !date) { alert('נושא ותאריך חובה'); return; }
+  const cid = document.getElementById('mm-caseid').value;
+  const c = DB.cases.find(x => x.id == cid); if (!c) return;
+  if (!c.meetings) c.meetings = [];
+  const eid = document.getElementById('mm-id').value;
+  const obj = {
+    id: eid || ('m' + uid()), title, date,
+    time: document.getElementById('mm-time').value,
+    endTime: document.getElementById('mm-endtime').value,
+    loc: document.getElementById('mm-loc').value,
+    notes: document.getElementById('mm-notes').value
+  };
+  if (eid) { const i = c.meetings.findIndex(m => m.id === eid); c.meetings[i] = obj; }
+  else c.meetings.push(obj);
+  if (document.getElementById('mm-add-cal').checked) {
+    DB.events.push({ id: uid(), title: '🤝 ' + title + ' — ' + c.name, date, time: obj.time, endTime: obj.endTime, caseId: cid, loc: obj.loc, notes: obj.notes || '' });
+  }
+  dbSave(); closeModal('meeting'); renderCaseProfile(cid);
+}
+
+function deleteMeeting() { deleteMeetingById(document.getElementById('mm-id').value); closeModal('meeting'); }
+function deleteMeetingById(mid) {
+  if (!confirm('למחוק פגישה זו?')) return;
+  const c = DB.cases.find(x => x.id == activeCaseId); if (!c) return;
+  c.meetings = (c.meetings || []).filter(m => m.id !== mid);
+  dbSave(); renderCaseProfile(activeCaseId);
+}
+
+function openTaskForCase() {
+  fillCaseSelect('mt-case');
+  document.getElementById('mt-title').textContent = '✅ משימה חדשה';
+  document.getElementById('mt-id').value = '';
+  ['mt-title-inp','mt-due','mt-notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('mt-prio').value = 'low';
+  document.getElementById('mt-case').value = activeCaseId;
+  document.getElementById('modal-task').classList.add('open');
+}
+
+function openChargeForCase() {
+  fillClientSelect('mch-client');
+  fillCaseSelect('mch-case');
+  fillChargeTemplateSelect();
+  const cas = DB.cases.find(x => x.id == activeCaseId);
+  document.getElementById('mch-title').textContent = '💰 חיוב חדש';
+  document.getElementById('mch-id').value = '';
+  ['mch-desc','mch-notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('mch-amount').value = '';
+  document.getElementById('mch-date').value = today();
+  document.getElementById('mch-status').value = 'unpaid';
+  document.getElementById('mch-template').value = '';
+  const vp=document.getElementById('vat-preview');if(vp)vp.style.display='none';
+  if (cas) { document.getElementById('mch-client').value = cas.clientId; onChargeClient(); document.getElementById('mch-case').value = activeCaseId; }
+  document.getElementById('modal-charge').classList.add('open');
+}
+
+// ══ CASE PROFILE ══
+function saveCase(){
+  const name=document.getElementById('mcs-name').value.trim();
+  if(!name){alert('שם התיק חובה');return;}
+  const cid=document.getElementById('mcs-client').value;
+  if(!cid){alert('יש לבחור לקוח');return;}
+  const eid=document.getElementById('mcs-id').value;
+  const obj={
+    id:eid||uid(),name,
+    num:document.getElementById('mcs-num').value,
+    clientId:parseInt(cid),
+    type:document.getElementById('mcs-type').value,
+    subtype:document.getElementById('mcs-subtype')?.value||'',
+    referrer:document.getElementById('mcs-referrer')?.value||'',
+    status:document.getElementById('mcs-status').value,
+    date:document.getElementById('mcs-date').value,
+    closeDate:document.getElementById('mcs-close-date')?.value||'',
+    extraId:document.getElementById('mcs-extra-id')?.value||'',
+    court:document.getElementById('mcs-court').value,
+    desc:document.getElementById('mcs-desc').value,
+    updated:today()
+  };
+  if(eid){const i=DB.cases.findIndex(c=>c.id==eid);DB.cases[i]=obj;}
+  else DB.cases.push(obj);
+  dbSave();closeModal('case');
+  if(currentView==='cases')renderCases();
+  else if(currentView==='client-profile')renderProfile(profileClientId);
+  renderDashboard();
+}
+
+function editCase(id){
+  const c=DB.cases.find(x=>x.id==id);if(!c)return;
+  fillClientSelect('mcs-client');
+  document.getElementById('mcs-title').textContent='✏️ עריכת תיק';
+  document.getElementById('mcs-id').value=c.id;
+  document.getElementById('mcs-name').value=c.name;
+  document.getElementById('mcs-num').value=c.num||'';
+  document.getElementById('mcs-client').value=c.clientId;
+  document.getElementById('mcs-type').value=c.type;
+  updateSubtypes();
+  if(c.subtype)document.getElementById('mcs-subtype').value=c.subtype;
+  document.getElementById('mcs-status').value=c.status;
+  document.getElementById('mcs-date').value=c.date||'';
+  document.getElementById('mcs-court').value=c.court||'';
+  document.getElementById('mcs-desc').value=c.desc||'';
+  document.getElementById('modal-case').classList.add('open');
+}
+
+function deleteCase(id){
+  if(!confirm('למחוק תיק זה?'))return;
+  DB.cases=DB.cases.filter(c=>c.id!=id);
+  dbSave();renderCases();renderDashboard();
+}
+
+function renderCases(){
+  fillClientSelect('mcs-client');
+  const filter=document.getElementById('cases-filter')?.value||'';
+  let list=DB.cases;
+  if(filter)list=list.filter(c=>c.status===filter);
+  const tbody=document.getElementById('cases-tbody');
+  if(!list.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty"><div class="empty-icon">📁</div><div class="empty-text">אין תיקים</div></div></td></tr>';return;}
+  tbody.innerHTML=list.map(c=>`<tr>
+    <td><strong>${c.num||'—'}</strong></td>
+    <td><span class="case-row-link" onclick="openCaseProfile(${c.id})">${c.name}</span></td>
+    <td>${clientName(c.clientId)}</td>
+    <td>${c.type}${c.subtype?`<br><span style="font-size:11px;color:var(--text3)">${c.subtype}</span>`:''}</td>
+    <td>${statusTag(c.status)}</td><td>${fdate(c.date)}</td>
+    <td><div style="display:flex;gap:6px;">
+      <button class="btn btn-ghost btn-xs" onclick="openCaseProfile(${c.id})">📂</button>
+      <button class="btn btn-ghost btn-xs" onclick="editCase(${c.id})">✏️</button>
+      <button class="btn btn-danger-soft btn-xs" onclick="deleteCase(${c.id})">🗑</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+// ══ TASKS ══
+function saveTask(){
+  const title=document.getElementById('mt-title-inp').value.trim();
+  if(!title){alert('כותרת חובה');return;}
+  const eid=document.getElementById('mt-id').value;
+  const obj={
+    id:eid||uid(),title,
+    caseId:document.getElementById('mt-case').value,
+    prio:document.getElementById('mt-prio').value,
+    due:document.getElementById('mt-due').value,
+    notes:document.getElementById('mt-notes').value,
+    done:false
+  };
+  if(eid){const i=DB.tasks.findIndex(t=>t.id==eid);obj.done=DB.tasks[i].done;DB.tasks[i]=obj;}
+  else DB.tasks.push(obj);
+  dbSave();closeModal('task');renderTasks();updateBadge();renderDashboard();
+  if(currentView==='case-profile')renderCaseProfile(activeCaseId);
+}
+
+function toggleTask(id){
+  const t=DB.tasks.find(x=>x.id==id);if(t)t.done=!t.done;
+  dbSave();updateBadge();renderDashboard();
+  if(currentView==='tasks')renderTasks();
+  else if(currentView==='client-profile')renderProfile(profileClientId);
+}
+
+function editTask(id){
+  const t=DB.tasks.find(x=>x.id==id);if(!t)return;
+  fillCaseSelect('mt-case');
+  document.getElementById('mt-title').textContent='✏️ עריכת משימה';
+  document.getElementById('mt-id').value=t.id;
+  document.getElementById('mt-title-inp').value=t.title;
+  document.getElementById('mt-case').value=t.caseId||'';
+  document.getElementById('mt-prio').value=t.prio;
+  const mrEl=document.getElementById('mt-reminder');if(mrEl)mrEl.value=t.reminder||'';
+  document.getElementById('mt-due').value=t.due||'';
+  document.getElementById('mt-notes').value=t.notes||'';
+  document.getElementById('modal-task').classList.add('open');
+}
+
+function deleteTask(id){
+  if(!confirm('למחוק?'))return;
+  DB.tasks=DB.tasks.filter(t=>t.id!=id);
+  dbSave();renderTasks();updateBadge();
+}
+
+function renderTasks(){
+  const filter=document.getElementById('tasks-filter')?.value||'open';
+  let list=DB.tasks;
+  const td2=today();
+  if(filter==='open')list=list.filter(t=>!t.done);
+  if(filter==='done')list=list.filter(t=>t.done);
+  if(filter==='reminder')list=list.filter(t=>!t.done&&t.reminder&&t.reminder<=td2);
+  list=[...list].sort((a,b)=>{
+    const pv={high:0,med:1,low:2};
+    if(pv[a.prio]!==pv[b.prio])return pv[a.prio]-pv[b.prio];
+    return(a.reminder||a.due||'').localeCompare(b.reminder||b.due||'');
+  });
+  const tbody=document.getElementById('tasks-tbody');
+  if(!list.length){tbody.innerHTML='<tr><td colspan="6"><div class="empty"><div class="empty-icon">✅</div><div class="empty-text">אין משימות</div></div></td></tr>';return;}
+  tbody.innerHTML=list.map(t=>`<tr class="${t.done?'task-done':''}">
+    <td><input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${t.id})" style="cursor:pointer;accent-color:var(--accent2);width:15px;height:15px;"></td>
+    <td><strong>${t.title}</strong>${t.notes?`<br><span style="font-size:11px;color:var(--text3)">${t.notes}</span>`:''}</td>
+    <td>${t.caseId?caseName(t.caseId):'—'}</td>
+    <td>${t.reminder?`<span style="color:${isOverdue(t.reminder)&&!t.done?'var(--danger)':'var(--text2)'}">${fdate(t.reminder)}</span>`:'—'}</td>
+    <td>${t.due?`<span style="color:${isOverdue(t.due)&&!t.done?'var(--danger)':'inherit'}">${fdate(t.due)}</span>`:'—'}</td>
+    <td>${prioLabel(t.prio)}</td>
+    <td><div style="display:flex;gap:6px;">
+      <button class="btn btn-ghost btn-xs" onclick="editTask(${t.id})">✏️</button>
+      <button class="btn btn-danger-soft btn-xs" onclick="deleteTask(${t.id})" title="מחיקה">🗑</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+// ══ EVENTS ══
+function saveEvent(){
+  const title=document.getElementById('mev-title-inp').value.trim();
+  const date=document.getElementById('mev-date').value;
+  if(!title||!date){alert('כותרת ותאריך חובה');return;}
+  const eid=document.getElementById('mev-id').value;
+  const obj={
+    id:eid||uid(),title,date,
+    time:document.getElementById('mev-time').value,
+    endTime:document.getElementById('mev-endtime').value,
+    caseId:document.getElementById('mev-case').value,
+    loc:document.getElementById('mev-loc').value,
+    notes:document.getElementById('mev-notes').value
+  };
+  if(eid){const i=DB.events.findIndex(e=>e.id==eid);DB.events[i]=obj;}
+  else DB.events.push(obj);
+  dbSave();closeModal('event');renderCalendar();renderDashboard();
+}
+
+let _editEventId=null;
+function editEvent(id){
+  const e=DB.events.find(x=>x.id==id);if(!e)return;
+  _editEventId=id;
+  fillCaseSelect('mev-case');
+  document.getElementById('mev-title').textContent='✏️ עריכת אירוע';
+  document.getElementById('mev-id').value=e.id;
+  document.getElementById('mev-title-inp').value=e.title;
+  document.getElementById('mev-date').value=e.date;
+  document.getElementById('mev-time').value=e.time||'';
+  document.getElementById('mev-endtime').value=e.endTime||'';
+  document.getElementById('mev-case').value=e.caseId||'';
+  document.getElementById('mev-loc').value=e.loc||'';
+  document.getElementById('mev-notes').value=e.notes||'';
+  document.getElementById('mev-delete-btn').style.display='inline-flex';
+  document.getElementById('modal-event').classList.add('open');
+}
+
+function deleteEventFromModal(){
+  if(!confirm('למחוק אירוע זה?'))return;
+  DB.events=DB.events.filter(e=>e.id!=_editEventId);
+  dbSave();closeModal('event');renderCalendar();renderDashboard();
+}
+
+const HM=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+const HD=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+
+function renderCalendar(){
+  document.getElementById('cal-label').textContent=`${HM[calM]} ${calY}`;
+  const grid=document.getElementById('cal-grid');
+  grid.innerHTML='';
+  HD.forEach(d=>grid.innerHTML+=`<div class="cal-hdr">${d}</div>`);
+  const first=new Date(calY,calM,1).getDay();
+  const days=new Date(calY,calM+1,0).getDate();
+  const td=today();
+  for(let i=0;i<first;i++){
+    const d=new Date(calY,calM,-first+i+1);
+    grid.innerHTML+=`<div class="cal-day other"><div class="cal-daynum">${d.getDate()}</div></div>`;
+  }
+  for(let d=1;d<=days;d++){
+    const ds=`${calY}-${String(calM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const evs=DB.events.filter(e=>e.date===ds);
+    const evHTML=evs.slice(0,3).map(e=>`<div class="cal-evt" onclick="event.stopPropagation();editEvent(${e.id})" title="${e.title}">${e.time?`<span dir="ltr">${e.time.substring(0,5)}</span> `:''} ${e.title}</div>`).join('');
+    const more=evs.length>3?`<div style="font-size:10px;color:var(--text3)">+${evs.length-3}</div>`:'';
+    grid.innerHTML+=`<div class="cal-day${ds===td?' today':''}" onclick="quickEvent('${ds}')">
+      <div class="cal-daynum">${d}</div>${evHTML}${more}
+    </div>`;
+  }
+}
+
+function quickEvent(ds){
+  fillCaseSelect('mev-case');
+  document.getElementById('mev-title').textContent='📅 אירוע חדש';
+  document.getElementById('mev-id').value='';
+  ['mev-title-inp','mev-time','mev-endtime','mev-loc','mev-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('mev-date').value=ds;
+  document.getElementById('mev-delete-btn').style.display='none';
+  document.getElementById('modal-event').classList.add('open');
+}
+
+function calMove(dir){calM+=dir;if(calM<0){calM=11;calY--;}if(calM>11){calM=0;calY++;}renderCalendar();}
+
+function exportICS(){
+  if(!DB.events.length){alert('אין אירועים לייצוא');return;}
+  let ics='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//LegalMgr//HE\r\nCALSCALE:GREGORIAN\r\n';
+  DB.events.forEach(ev=>{
+    const dt=ev.date.replace(/-/g,'');
+    const allDay=!ev.time;
+    const st=allDay?dt:dt+'T'+ev.time.replace(':','')+'00';
+    const et=ev.endTime?(dt+'T'+ev.endTime.replace(':','')+'00'):st;
+    ics+='BEGIN:VEVENT\r\n';
+    ics+=`UID:lm-${ev.id}@legal\r\n`;
+    ics+=allDay?`DTSTART;VALUE=DATE:${dt}\r\nDTEND;VALUE=DATE:${dt}\r\n`:`DTSTART:${st}\r\nDTEND:${et}\r\n`;
+    ics+=`SUMMARY:${ev.title}\r\n`;
+    if(ev.loc)ics+=`LOCATION:${ev.loc}\r\n`;
+    if(ev.notes)ics+=`DESCRIPTION:${ev.notes.replace(/\n/g,'\\n')}\r\n`;
+    ics+='END:VEVENT\r\n';
+  });
+  ics+='END:VCALENDAR';
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));
+  a.download='legal-calendar.ics';a.click();
+}
+
+// ══ CHARGES ══
+function quickChargeStatus(id,status){
+  const c=DB.charges.find(x=>x.id==id);if(c){c.status=status;dbSave();}
+  renderCharges();renderDashboard();
+  if(currentView==='client-profile')renderProfile(profileClientId);
+}
+
+function saveCharge(){
+  const desc=document.getElementById('mch-desc').value.trim();
+  const cid=document.getElementById('mch-client').value;
+  const amt=parseFloat(document.getElementById('mch-amount').value);
+  if(!desc||!cid||isNaN(amt)){alert('תיאור, לקוח וסכום חובה');return;}
+  const eid=document.getElementById('mch-id').value;
+  const obj={
+    id:eid||uid(),desc,clientId:parseInt(cid),
+    caseId:document.getElementById('mch-case').value,
+    amount:amt,
+    date:document.getElementById('mch-date').value,
+    status:document.getElementById('mch-status').value,
+    notes:document.getElementById('mch-notes').value
+  };
+  if(eid){const i=DB.charges.findIndex(c=>c.id==eid);DB.charges[i]=obj;}
+  else DB.charges.push(obj);
+  dbSave();closeModal('charge');renderCharges();renderDashboard();
+  if(currentView==='client-profile')renderProfile(profileClientId);
+  if(currentView==='case-profile')renderCaseProfile(activeCaseId);
+}
+
+function editCharge(id){
+  const c=DB.charges.find(x=>x.id==id);if(!c)return;
+  fillClientSelect('mch-client');
+  fillChargeTemplateSelect();
+  document.getElementById('mch-template').value='';
+  document.getElementById('mch-title').textContent='✏️ עריכת חיוב';
+  document.getElementById('mch-id').value=c.id;
+  document.getElementById('mch-desc').value=c.desc;
+  document.getElementById('mch-amount').value=c.amount;
+  document.getElementById('mch-date').value=c.date||'';
+  document.getElementById('mch-status').value=c.status;
+  document.getElementById('mch-notes').value=c.notes||'';
+  document.getElementById('mch-client').value=c.clientId;
+  fillCaseSelect('mch-case', c.clientId);
+  if(c.caseId) document.getElementById('mch-case').value=c.caseId;
+  updateVatPreview();
+  document.getElementById('modal-charge').classList.add('open');
+}
+
+function deleteCharge(id){
+  if(!confirm('למחוק?'))return;
+  DB.charges=DB.charges.filter(c=>c.id!=id);
+  dbSave();renderCharges();renderDashboard();
+  if(activeCaseId)renderCaseProfile(DB.cases.find(x=>x.id==activeCaseId));
+}
+
+function duplicateCharge(id){
+  const ch=DB.charges.find(x=>x.id==id);if(!ch)return;
+  fillClientSelect('mch-client');
+  fillCaseSelect('mch-case');
+  fillChargeTemplateSelect();
+  document.getElementById('mch-template').value='';
+  document.getElementById('mch-title').textContent='⧉ שכפול חיוב';
+  document.getElementById('mch-id').value='';
+  document.getElementById('mch-desc').value=ch.desc;
+  document.getElementById('mch-amount').value=ch.amount;
+  document.getElementById('mch-date').value=today();
+  document.getElementById('mch-status').value='unpaid';
+  document.getElementById('mch-notes').value=ch.notes||'';
+  // set client first, then refill cases for that client, then restore case
+  document.getElementById('mch-client').value=ch.clientId;
+  fillCaseSelect('mch-case', ch.clientId);
+  if(ch.caseId) document.getElementById('mch-case').value=ch.caseId;
+  updateVatPreview();
+  document.getElementById('modal-charge').classList.add('open');
+}
+
+function onChargeClient(){
+  const cid=document.getElementById('mch-client').value;
+  fillCaseSelect('mch-case',cid);
+}
+
+function renderCharges(){
+  const filter=document.getElementById('charges-filter')?.value||'';
+  let list=DB.charges;
+  if(filter)list=list.filter(c=>c.status===filter);
+  list=[...list].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const unpaid=DB.charges.filter(c=>c.status!=='paid').reduce((s,c)=>s+c.amount,0);
+  const paid=DB.charges.filter(c=>c.status==='paid').reduce((s,c)=>s+c.amount,0);
+  document.getElementById('total-unpaid').textContent='₪'+unpaid.toLocaleString();
+  document.getElementById('total-paid').textContent='₪'+paid.toLocaleString();
+  const tbody=document.getElementById('charges-tbody');
+  if(!list.length){tbody.innerHTML='<tr><td colspan="6"><div class="empty"><div class="empty-icon">💰</div><div class="empty-text">אין חיובים</div></div></td></tr>';return;}
+  tbody.innerHTML=list.map(c=>`<tr>
+    <td>${c.desc}${c.notes?`<br><span style="font-size:11px;color:var(--text3)">${c.notes}</span>`:''}</td>
+    <td>${clientName(c.clientId)}${c.caseId?`<br><span style="font-size:11px;color:var(--text3)">${caseName(c.caseId)}</span>`:''}</td>
+    <td><span class="amount">₪${Number(c.amount).toLocaleString()}</span></td>
+    <td>${fdate(c.date)}</td>
+    <td><select class="qs-select" onchange="quickChargeStatus(${c.id},this.value)">
+      <option value="unpaid"${c.status==='unpaid'?' selected':''}>לא שולם</option>
+      <option value="partial"${c.status==='partial'?' selected':''}>חלקי</option>
+      <option value="paid"${c.status==='paid'?' selected':''}>שולם</option>
+    </select></td>
+    <td><div style="display:flex;gap:6px;">
+      <button class="btn btn-ghost btn-xs" onclick="editCharge(${c.id})">✏️</button>
+      <button class="btn btn-danger-soft btn-xs" onclick="deleteCharge(${c.id})">🗑</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+// ══ DASHBOARD ══
+function renderDashboard(){
+  document.getElementById('s-clients').textContent=DB.clients.length;
+  document.getElementById('s-cases').textContent=DB.cases.filter(c=>c.status!=='closed').length;
+  document.getElementById('s-charges').textContent='₪'+DB.charges.filter(c=>c.status!=='paid').reduce((s,c)=>s+c.amount,0).toLocaleString();
+  const td=today();
+  const tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);const tmr=tomorrow.toISOString().split('T')[0];
+  const allReminders=DB.tasks.filter(t=>!t.done&&t.reminder&&t.reminder<=td).sort((a,b)=>(a.reminder||'').localeCompare(b.reminder||''));
+  const elSR=document.getElementById('s-reminders');if(elSR)elSR.textContent=allReminders.length;
+  // Reminders panel
+  const dr=document.getElementById('dash-reminders');
+  if(dr)dr.innerHTML=allReminders.length?allReminders.slice(0,6).map(t=>`<div style="display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--border);">
+    <input type="checkbox" onchange="toggleTask(${t.id})" style="accent-color:var(--accent2);width:14px;height:14px;cursor:pointer;">
+    <div style="flex:1;"><div style="font-size:13px;font-weight:600;">${t.title}</div><div style="font-size:11px;color:${isOverdue(t.reminder)?'var(--danger)':'var(--text3)'};">${fdate(t.reminder)}${t.caseId?' · '+caseName(t.caseId):''}</div></div>
+    ${prioLabel(t.prio)}
+  </div>`).join(''):'<div style="color:var(--text3);font-size:13px;padding:14px 0;">אין תזכורות פעילות 🎉</div>';
+  // Events panel
+  const upcoming=[...DB.events].filter(e=>e.date>=td).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,5);
+  const de=document.getElementById('dash-events');
+  if(de)de.innerHTML=upcoming.length?upcoming.map(e=>`<div style="display:flex;align-items:center;gap:11px;padding:8px 0;border-bottom:1px solid var(--border);">
+    <div style="background:rgba(59,130,246,.15);border-radius:7px;padding:5px 9px;text-align:center;min-width:44px;">
+      <div style="font-size:10px;color:var(--text3);">${['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'][parseInt(e.date.split('-')[1])-1]}</div>
+      <div style="font-size:16px;font-weight:800;color:var(--accent2);">${parseInt(e.date.split('-')[2])}</div>
+    </div>
+    <div><div style="font-size:13px;font-weight:600;">${e.title}</div><div style="font-size:11px;color:var(--text3);">${e.time?`<span dir="ltr">${e.time.substring(0,5)}</span> · `:''}${e.loc||''}${e.caseId?' · '+caseName(e.caseId):''}</div></div>
+  </div>`).join(''):'<div style="color:var(--text3);font-size:13px;padding:14px 0;">אין אירועים קרובים</div>';
+  // Active tasks (secondary/smaller)
+  const activeTasks=[...DB.tasks].filter(t=>!t.done).sort((a,b)=>{const pv={high:0,med:1,low:2};return pv[a.prio]-pv[b.prio];}).slice(0,5);
+  const dt=document.getElementById('dash-tasks');
+  if(dt)dt.innerHTML=activeTasks.length?activeTasks.map(t=>`<div style="display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid var(--border);">
+    <input type="checkbox" onchange="toggleTask(${t.id})" style="accent-color:var(--accent2);width:13px;height:13px;cursor:pointer;">
+    <div style="flex:1;">${t.title}</div>${prioLabel(t.prio)}
+  </div>`).join(''):'<div style="color:var(--text3);padding:10px 0;">אין משימות פעילות 🎉</div>';
+  // Active cases (secondary/smaller)
+  const activeCases=DB.cases.filter(c=>c.status!=='closed').slice(0,5);
+  const dac=document.getElementById('dash-active-cases');
+  if(dac)dac.innerHTML=activeCases.length?activeCases.map(c=>`<div style="display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid var(--border);">
+    <span class="case-row-link" onclick="openCaseProfile(${c.id})">${c.name}</span>
+    <span style="margin-right:auto;">${statusTag(c.status)}</span>
+  </div>`).join(''):'<div style="color:var(--text3);padding:10px 0;">אין תיקים פעילים</div>';
+}
+
+function handleSearch(val){
+  if(currentView!=='clients'&&currentView!=='cases')navTo('clients');
+  renderClients(val||undefined);
+}
+
+// ══ BACKUP ══
+function openBackup(){document.getElementById('modal-backup').classList.add('open');}
+function exportJSON(){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(DB,null,2)],{type:'application/json'}));
+  a.download=`legal-backup-${today()}.json`;a.click();
+}
+function triggerImport(){document.getElementById('import-file').click();}
+function importData(ev){
+  const f=ev.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const d=JSON.parse(e.target.result);
+      if(!confirm('ייבוא יחליף את כל הנתונים הקיימים. להמשיך?'))return;
+      DB=d;dbSave();
+      renderDashboard();renderCalendar();updateBadge();
+      alert('✅ ייבוא הושלם!');
+    }catch(err){alert('שגיאה: '+err.message);}
+  };
+  r.readAsText(f);ev.target.value='';
+}
+
+// ══ GOOGLE DRIVE ══
+// Replace with your own Client ID from console.cloud.google.com
+const GDRIVE_CLIENT_ID='624619006871-vchmldvpff9em4v95b37fk56ijaniab1.apps.googleusercontent.com';
+const GDRIVE_SCOPE='https://www.googleapis.com/auth/drive.file';
+const GDRIVE_FNAME='legal-manager-backup.json';
+let gdriveToken=null;
+let gdriveFileId=localStorage.getItem('gd_fid')||null;
+
+function gdriveStatus(msg,type){
+  const el=document.getElementById('gdrive-status');
+  el.textContent=msg;el.className=type;
+}
+
+function gdriveConnect(){
+  if(GDRIVE_CLIENT_ID==='YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com'){
+    gdriveStatus('⚠️ נא להגדיר Google Client ID בקוד (ראי הוראות בפאנל הגיבוי)','err');return;
+  }
+  gdriveStatus('מתחבר...','info');
+  try{
+    const client=google.accounts.oauth2.initTokenClient({
+      client_id:GDRIVE_CLIENT_ID,scope:GDRIVE_SCOPE,
+      callback:(resp)=>{
+        if(resp.error){gdriveStatus('שגיאה: '+resp.error,'err');return;}
+        gdriveToken=resp.access_token;
+        gdriveStatus('✅ מחובר! כעת תוכלי לשמור ולשחזר.','ok');
+      }
+    });
+    client.requestAccessToken();
+  }catch(e){gdriveStatus('ספריית Google לא נטענה. בדקי חיבור לאינטרנט.','err');}
+}
+
+async function gdriveSave(){
+  if(!gdriveToken){gdriveStatus('יש להתחבר תחילה','err');return;}
+  gdriveStatus('שומר...','info');
+  const content=JSON.stringify(DB,null,2);
+  try{
+    if(!gdriveFileId){
+      const meta=await fetch('https://www.googleapis.com/drive/v3/files',{
+        method:'POST',
+        headers:{Authorization:`Bearer ${gdriveToken}`,'Content-Type':'application/json'},
+        body:JSON.stringify({name:GDRIVE_FNAME,mimeType:'application/json'})
+      }).then(r=>r.json());
+      gdriveFileId=meta.id;localStorage.setItem('gd_fid',gdriveFileId);
+    }
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${gdriveFileId}?uploadType=media`,{
+      method:'PATCH',
+      headers:{Authorization:`Bearer ${gdriveToken}`,'Content-Type':'application/json'},
+      body:content
+    });
+    gdriveStatus('✅ נשמר ב-Google Drive! '+new Date().toLocaleTimeString('he-IL'),'ok');
+  }catch(e){gdriveStatus('שגיאת שמירה: '+e.message,'err');}
+}
+
+async function gdriveLoad(){
+  if(!gdriveToken){gdriveStatus('יש להתחבר תחילה','err');return;}
+  if(!gdriveFileId){gdriveStatus('לא נמצא קובץ גיבוי (שמרי קודם)','err');return;}
+  gdriveStatus('טוען מהענן...','info');
+  try{
+    const r=await fetch(`https://www.googleapis.com/drive/v3/files/${gdriveFileId}?alt=media`,{
+      headers:{Authorization:`Bearer ${gdriveToken}`}
+    });
+    const d=await r.json();
+    if(!confirm('שחזור יחליף את כל הנתונים הנוכחיים. להמשיך?'))return;
+    DB=d;dbSave();
+    renderDashboard();renderCalendar();updateBadge();
+    gdriveStatus('✅ שוחזר בהצלחה!','ok');
+  }catch(e){gdriveStatus('שגיאת טעינה: '+e.message,'err');}
+}
+
+// ══ MISSING FUNCTIONS ══
+
+function openNewClient(){
+  document.getElementById('mc-title').textContent='👤 לקוח חדש';
+  document.getElementById('mc-id').value='';
+  ['mc-firstname','mc-lastname','mc-idnum','mc-phone','mc-email','mc-addr','mc-notes'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  openModal('client');
+}
+
+function openNewCase(){
+  fillClientSelect('mcs-client');
+  fillCaseTypeSelect();
+  fillReferrerSelect('mcs-referrer');
+  document.getElementById('mcs-title').textContent='📁 תיק חדש';
+  document.getElementById('mcs-id').value='';
+  ['mcs-num','mcs-name','mcs-court','mcs-desc'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const cd=document.getElementById('mcs-close-date');if(cd)cd.value='';
+  const ei=document.getElementById('mcs-extra-id');if(ei)ei.value='';
+  document.getElementById('mcs-date').value=today();
+  document.getElementById('mcs-status').value='active';
+  const sr=document.getElementById('subtype-row');if(sr)sr.style.display='none';
+  openModal('case');
+}
+
+function openNewTask(){
+  fillCaseSelect('mt-case');
+  document.getElementById('mt-title').textContent='✅ משימה חדשה';
+  document.getElementById('mt-id').value='';
+  ['mt-title-inp','mt-due','mt-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const mr=document.getElementById('mt-reminder');if(mr)mr.value='';
+  document.getElementById('mt-prio').value='low';
+  openModal('task');
+}
+
+function openNewCharge(){
+  fillClientSelect('mch-client');
+  fillCaseSelect('mch-case');
+  fillChargeTemplateSelect();
+  document.getElementById('mch-title').textContent='💰 חיוב חדש';
+  document.getElementById('mch-id').value='';
+  ['mch-desc','mch-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('mch-amount').value='';
+  document.getElementById('mch-date').value=today();
+  document.getElementById('mch-status').value='unpaid';
+  const mt=document.getElementById('mch-template');if(mt)mt.value='';
+  const vp=document.getElementById('vat-preview');if(vp)vp.style.display='none';
+  openModal('charge');
+}
+
+function openNewEvent(){
+  fillCaseSelect('mev-case');
+  document.getElementById('mev-title').textContent='📅 אירוע חדש';
+  document.getElementById('mev-id').value='';
+  ['mev-title-inp','mev-time','mev-endtime','mev-loc','mev-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('mev-date').value='';
+  document.getElementById('mev-delete-btn').style.display='none';
+  openModal('event');
+}
+
+function renderReferrersList(){
+  const el=document.getElementById('referrers-list');if(!el)return;
+  el.innerHTML=(DB.referrers||[]).map((r,i)=>`<div style="display:flex;align-items:center;gap:7px;padding:7px 11px;border-bottom:1px solid var(--border);">
+    <span style="flex:1;font-size:13px;">${r}</span>
+    <button class="btn btn-danger-soft btn-xs" onclick="deleteReferrer(${i})">✕</button>
+  </div>`).join('')||'<div style="padding:10px;color:var(--text3);font-size:12px;">אין גורמי הפניה</div>';
+}
+function addReferrer(){
+  const name=document.getElementById('new-referrer-inp').value.trim();if(!name)return;
+  if(!DB.referrers)DB.referrers=[];
+  DB.referrers.push(name);document.getElementById('new-referrer-inp').value='';
+  dbSave();renderReferrersList();
+}
+function deleteReferrer(i){
+  if(!confirm('למחוק?'))return;
+  DB.referrers.splice(i,1);dbSave();renderReferrersList();
+}
+
+function updateVatPreview(){
+  const amt=parseFloat(document.getElementById('mch-amount').value);
+  const el=document.getElementById('vat-preview');if(!el)return;
+  if(isNaN(amt)||amt<=0){el.style.display='none';return;}
+  el.style.display='block';
+  el.innerHTML=`כולל מע״מ (${DB.vatRate||18}%): <strong>₪${withVat(amt).toLocaleString()}</strong>`;
+}
+function saveVatRate(){
+  const v=parseFloat(document.getElementById('vat-rate-inp').value);
+  if(isNaN(v)||v<0||v>100){alert('שיעור מע״מ לא תקין');return;}
+  DB.vatRate=v;dbSave();
+  const vd=document.getElementById('vat-rate-display');if(vd)vd.textContent=`נוכחי: ${v}%`;
+  alert('שיעור המע״מ עודכן ל-'+v+'%');
+}
+
+function openExportTasksModal(){
+  const sel=document.getElementById('exp-client');
+  if(sel){sel.innerHTML='<option value="">כל הלקוחות</option>';DB.clients.forEach(c=>sel.innerHTML+=`<option value="${c.id}">${c.name}</option>`);}
+  const csel=document.getElementById('exp-case');
+  if(csel){csel.innerHTML='<option value="">כל התיקים</option>';DB.cases.forEach(c=>csel.innerHTML+=`<option value="${c.id}">${c.name}</option>`);}
+  ['exp-reminder-from','exp-reminder-to','exp-due-from','exp-due-to'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const es=document.getElementById('exp-status');if(es)es.value='open';
+  openModal('export-tasks');
+}
+function exportTasksCSV(){
+  const clientId=document.getElementById('exp-client')?.value||'';
+  const caseId=document.getElementById('exp-case')?.value||'';
+  const rFrom=document.getElementById('exp-reminder-from')?.value||'';
+  const rTo=document.getElementById('exp-reminder-to')?.value||'';
+  const dFrom=document.getElementById('exp-due-from')?.value||'';
+  const dTo=document.getElementById('exp-due-to')?.value||'';
+  const status=document.getElementById('exp-status')?.value||'open';
+  let list=[...DB.tasks];
+  if(status==='open')list=list.filter(t=>!t.done);
+  if(status==='done')list=list.filter(t=>t.done);
+  if(clientId){const ids=DB.cases.filter(c=>c.clientId==clientId).map(c=>String(c.id));list=list.filter(t=>ids.includes(String(t.caseId)));}
+  if(caseId)list=list.filter(t=>String(t.caseId)===String(caseId));
+  if(rFrom)list=list.filter(t=>t.reminder&&t.reminder>=rFrom);
+  if(rTo)list=list.filter(t=>t.reminder&&t.reminder<=rTo);
+  if(dFrom)list=list.filter(t=>t.due&&t.due>=dFrom);
+  if(dTo)list=list.filter(t=>t.due&&t.due<=dTo);
+  if(!list.length){alert('לא נמצאו משימות לייצוא');return;}
+  const lines=['"משימה","תיק","תאריך תזכורת","תאריך אחרון לביצוע","עדיפות","סטטוס"'];
+  list.forEach(t=>lines.push(`"${t.title}","${t.caseId?caseName(t.caseId):''}","${fdate(t.reminder)}","${fdate(t.due)}","${t.prio==='high'?'גבוהה':t.prio==='med'?'בינונית':'נמוכה'}","${t.done?'הושלמה':'פתוחה'}"`));
+  const blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`משימות-${today()}.csv`;a.click();
+  closeModal('export-tasks');
+}
+
+function initSearch(){
+  const sel=document.getElementById('adv-client');if(!sel)return;
+  sel.innerHTML='<option value="">כל הלקוחות</option>';
+  DB.clients.forEach(c=>sel.innerHTML+=`<option value="${c.id}">${c.name}</option>`);
+}
+function runAdvSearch(){
+  const text=(document.getElementById('adv-text')?.value||'').toLowerCase().trim();
+  const type=document.getElementById('adv-type')?.value||'';
+  const clientId=document.getElementById('adv-client')?.value||'';
+  const status=document.getElementById('adv-status')?.value||'';
+  const from=document.getElementById('adv-from')?.value||'';
+  const to=document.getElementById('adv-to')?.value||'';
+  const results=[];
+  if(!type||type==='client')
+    DB.clients.filter(c=>!text||c.name.toLowerCase().includes(text)||(c.phone||'').includes(text)||(c.email||'').toLowerCase().includes(text))
+    .forEach(c=>results.push({type:'לקוח',title:c.name,sub:c.phone||c.email||'',onclick:`openProfile(${c.id})`}));
+  if(!type||type==='case')
+    DB.cases.filter(c=>(!text||(c.name.toLowerCase().includes(text)||(c.num||'').includes(text)||(c.desc||'').toLowerCase().includes(text)))&&(!clientId||c.clientId==clientId)&&(!status||c.status===status)&&(!from||c.date>=from)&&(!to||c.date<=to))
+    .forEach(c=>results.push({type:'תיק',title:c.name,sub:clientName(c.clientId)+' · '+c.type,onclick:`openCaseProfile(${c.id})`}));
+  if(!type||type==='task')
+    DB.tasks.filter(t=>!text||t.title.toLowerCase().includes(text)||(t.notes||'').toLowerCase().includes(text))
+    .forEach(t=>results.push({type:'משימה',title:t.title,sub:(t.caseId?caseName(t.caseId)+' · ':'')+(t.due?fdate(t.due):''),onclick:`editTask(${t.id})`}));
+  if(!type||type==='charge')
+    DB.charges.filter(ch=>!text||ch.desc.toLowerCase().includes(ch))
+    .forEach(ch=>results.push({type:'חיוב',title:ch.desc,sub:clientName(ch.clientId)+' · ₪'+Number(ch.amount).toLocaleString(),onclick:`editCharge(${ch.id})`}));
+  const el=document.getElementById('adv-results');if(!el)return;
+  if(!results.length){el.innerHTML='<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">לא נמצאו תוצאות</div></div>';return;}
+  el.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;">${results.map(r=>`<div class="search-result-item" onclick="${r.onclick}"><span class="sri-type">${r.type}</span><div><div class="sri-title">${r.title}</div><div class="sri-sub">${r.sub}</div></div></div>`).join('')}</div>`;
+}
+
+
+dbLoad();
+if (!DB.caseTypes) {
+  DB.caseTypes = [
+    { name: 'אזרחי', subtypes: [] },
+    { name: 'פלילי', subtypes: ['עבירות נגד הגוף', 'עבירות רכוש', 'עבירות מין', 'עבירות סמים', 'עבירות תעבורה', 'עבירות צווארון לבן', 'עבירות אלימות במשפחה'] },
+    { name: 'מסחרי', subtypes: [] },
+    { name: 'משפחה', subtypes: ['גירושין', 'משמורת', 'מזונות', 'הסכם ממון', 'ירושה'] },
+    { name: 'עבודה', subtypes: [] },
+    { name: 'מקרקעין', subtypes: [] },
+    { name: 'מנהלי', subtypes: [] },
+    { name: 'אחר', subtypes: [] }
+  ];
+}
+if(!DB.referrers)DB.referrers=["סניגוריה ציבורית רגיל","סניגוריה ציבורית ריטיינר","פרטי"];
+if(!DB.vatRate)DB.vatRate=18;
+if (!DB.chargeTemplates) {
+  DB.chargeTemplates = [
+    { id: 'ct1',  name: 'שלום – ישיבה ראשונה במעצר ימים', price: 766 },
+    { id: 'ct2',  name: 'שלום – ישיבה ראשונה במעצר עד תום הליכים', price: 918 },
+    { id: 'ct3',  name: 'שלום – ישיבה ראשונה בעבירת חטא', price: 1072 },
+    { id: 'ct4',  name: 'שלום – ישיבה ראשונה בעבירה של 5 שנים ומעלה', price: 3150 },
+    { id: 'ct5',  name: 'שלום – ישיבה ראשונה בעבירה של 3 שנים ומעלה', price: 1839 },
+    { id: 'ct6',  name: 'שלום – ישיבה ראשונה עבירה אחרת', price: 1379 },
+    { id: 'ct7',  name: 'שלום – ישיבה ראשונה בעבירה של גרימת מוות', price: 2831 },
+    { id: 'ct8',  name: 'שלום – ישיבה ראשונה בהליך עיקרי אחר', price: 1922 },
+    { id: 'ct9',  name: 'שלום – ישיבה נוספת מהותית', price: 584 },
+    { id: 'ct10', name: 'שלום – ישיבה נוספת לא מהותית', price: 394 },
+    { id: 'ct11', name: 'מחוזי – ישיבה ראשונה בערר על מעצר', price: 1145 },
+    { id: 'ct12', name: 'מחוזי – ישיבה ראשונה במעצר עד תום הליכים', price: 1911 },
+    { id: 'ct13', name: 'מחוזי – ישיבה ראשונה במשפט פלילי', price: 3828 },
+    { id: 'ct14', name: 'מחוזי – ישיבה ראשונה בערעור פלילי על פס״ד', price: 3538 },
+    { id: 'ct15', name: 'מחוזי – ישיבה ראשונה בערעור פלילי על גז״ד', price: 1770 },
+    { id: 'ct16', name: 'מחוזי – ישיבה ראשונה בהליך עיקרי אחר', price: 2520 },
+    { id: 'ct17', name: 'מחוזי – ישיבה נוספת', price: 960 },
+    { id: 'ct18', name: 'עליון – ישיבה ראשונה בערר על מעצר', price: 1911 },
+    { id: 'ct19', name: 'עליון – ישיבה ראשונה בערעור פלילי על פס״ד', price: 5308 },
+    { id: 'ct20', name: 'עליון – ישיבה ראשונה בערעור פלילי על גז״ד', price: 2652 },
+    { id: 'ct21', name: 'עליון – ישיבה ראשונה בהליך עיקרי אחר', price: 2836 },
+    { id: 'ct22', name: 'עליון – ישיבה נוספת', price: 1530 },
+    { id: 'ct23', name: 'שעת תורנות בבית משפט', price: 185 },
+    { id: 'ct24', name: 'שעת תורנות מחוץ לבית משפט', price: 68 },
+    { id: 'ct25', name: 'ביקור ראשון אצל חשוד במעצר', price: 291 },
+    { id: 'ct26', name: 'שעת ביקור בבית מעצר או אשפוז', price: 121 },
+    { id: 'ct27', name: 'שעת נסיעה לביקור', price: 78 },
+    { id: 'ct28', name: 'הוצאות נסיעה (לק״מ)', price: 1.4 }
+  ];
+}
+
+let settingsSelectedType = null;
+
+// ══ SETTINGS ══
+function openModal_settings() {
+  renderTypesList();
+  renderChargeTemplatesList();
+  renderReferrersList();
+  fillCaseTypeSelect();
+  const vr=document.getElementById('vat-rate-inp');if(vr)vr.value=DB.vatRate||18;
+  const vd=document.getElementById('vat-rate-display');if(vd)vd.textContent=`נוכחי: ${DB.vatRate||18}%`;
+  document.getElementById('modal-settings').classList.add('open');
+}
+
+function renderTypesList() {
+  const el = document.getElementById('types-list');
+  if (!DB.caseTypes.length) { el.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:13px;">אין סוגים</div>'; return; }
+  el.innerHTML = DB.caseTypes.map((t, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;background:${settingsSelectedType===i?'rgba(201,168,76,.08)':'transparent'}" onclick="selectTypeForSubtypes(${i})">
+      <span style="flex:1;font-size:13px;font-weight:${settingsSelectedType===i?700:400};color:${settingsSelectedType===i?'var(--accent)':'var(--text)'};">${t.name}</span>
+      <span style="font-size:11px;color:var(--text3);">${t.subtypes.length} תת-סוגים</span>
+      <button class="btn btn-danger-soft btn-xs" onclick="event.stopPropagation();deleteCaseType(${i})">✕</button>
+    </div>`).join('');
+}
+
+function selectTypeForSubtypes(i) {
+  settingsSelectedType = i;
+  document.getElementById('selected-type-label').textContent = DB.caseTypes[i].name;
+  renderTypesList();
+  renderSubtypesList();
+}
+
+function renderSubtypesList() {
+  const el = document.getElementById('subtypes-list');
+  if (settingsSelectedType === null) { el.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:13px;">בחרי סוג ראשי</div>'; return; }
+  const t = DB.caseTypes[settingsSelectedType];
+  if (!t.subtypes.length) { el.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:13px;">אין תת-סוגים — הוסיפי למטה</div>'; return; }
+  el.innerHTML = t.subtypes.map((s, j) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);">
+      <span style="flex:1;font-size:13px;">${s}</span>
+      <button class="btn btn-danger-soft btn-xs" onclick="deleteSubtype(${j})">✕</button>
+    </div>`).join('');
+}
+
+function addCaseType() {
+  const name = document.getElementById('new-type-inp').value.trim();
+  if (!name) return;
+  DB.caseTypes.push({ name, subtypes: [] });
+  document.getElementById('new-type-inp').value = '';
+  dbSave(); renderTypesList(); fillCaseTypeSelect();
+}
+
+function deleteCaseType(i) {
+  if (!confirm('למחוק סוג זה?')) return;
+  DB.caseTypes.splice(i, 1);
+  if (settingsSelectedType === i) settingsSelectedType = null;
+  dbSave(); renderTypesList(); renderSubtypesList(); fillCaseTypeSelect();
+}
+
+function addSubtype() {
+  if (settingsSelectedType === null) { alert('בחרי קודם סוג ראשי'); return; }
+  const name = document.getElementById('new-subtype-inp').value.trim();
+  if (!name) return;
+  DB.caseTypes[settingsSelectedType].subtypes.push(name);
+  document.getElementById('new-subtype-inp').value = '';
+  dbSave(); renderSubtypesList(); renderTypesList(); fillCaseTypeSelect();
+}
+
+function deleteSubtype(j) {
+  if (settingsSelectedType === null) return;
+  DB.caseTypes[settingsSelectedType].subtypes.splice(j, 1);
+  dbSave(); renderSubtypesList(); renderTypesList(); fillCaseTypeSelect();
+}
+
+function fillCaseTypeSelect() {
+  const sel = document.getElementById('mcs-type');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '';
+  (DB.caseTypes || []).forEach(t => {
+    sel.innerHTML += `<option value="${t.name}">${t.name}</option>`;
+  });
+  if (prev) sel.value = prev;
+  updateSubtypes();
+}
+
+function updateSubtypes() {
+  const typeName = document.getElementById('mcs-type')?.value;
+  const t = (DB.caseTypes || []).find(x => x.name === typeName);
+  const row = document.getElementById('subtype-row');
+  const sel = document.getElementById('mcs-subtype');
+  if (!t || !t.subtypes.length) { if(row) row.style.display = 'none'; return; }
+  if(row) row.style.display = '';
+  sel.innerHTML = '<option value="">— בחרי תת-סוג —</option>';
+  t.subtypes.forEach(s => sel.innerHTML += `<option value="${s}">${s}</option>`);
+}
+
+// ══ CHARGE TEMPLATES ══
+function renderChargeTemplatesList() {
+  const el = document.getElementById('charge-templates-list');
+  if (!DB.chargeTemplates.length) { el.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:13px;">אין פריטים במחירון</div>'; return; }
+  el.innerHTML = DB.chargeTemplates.map(t => `
+    <div style="display:grid;grid-template-columns:1fr 110px auto;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border);">
+      <span style="font-size:13px;">${t.name}</span>
+      <input type="number" value="${t.price}" min="0"
+        style="padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);text-align:left;"
+        onchange="updateTemplatePrice('${t.id}', this.value)"
+        placeholder="מחיר">
+      <button class="btn btn-danger-soft btn-xs" onclick="deleteChargeTemplate('${t.id}')">✕</button>
+    </div>`).join('');
+}
+
+function addChargeTemplate() {
+  const name = document.getElementById('new-tmpl-name').value.trim();
+  const price = parseFloat(document.getElementById('new-tmpl-price').value) || 0;
+  if (!name) return;
+  DB.chargeTemplates.push({ id: 'ct' + uid(), name, price });
+  document.getElementById('new-tmpl-name').value = '';
+  document.getElementById('new-tmpl-price').value = '';
+  dbSave(); renderChargeTemplatesList(); fillChargeTemplateSelect();
+}
+
+function updateTemplatePrice(id, val) {
+  const t = DB.chargeTemplates.find(x => x.id === id);
+  if (t) { t.price = parseFloat(val) || 0; dbSave(); fillChargeTemplateSelect(); }
+}
+
+function deleteChargeTemplate(id) {
+  DB.chargeTemplates = DB.chargeTemplates.filter(t => t.id !== id);
+  dbSave(); renderChargeTemplatesList(); fillChargeTemplateSelect();
+}
+
+function fillChargeTemplateSelect() {
+  const sel = document.getElementById('mch-template');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— בחירה מהמחירון (אופציונלי) —</option>';
+  (DB.chargeTemplates || []).forEach(t => {
+    sel.innerHTML += `<option value="${t.id}">${t.name}${t.price ? ' — ₪' + t.price.toLocaleString() : ''}</option>`;
+  });
+}
+
+function applyChargeTemplate() {
+  const id = document.getElementById('mch-template').value;
+  if (!id) return;
+  const t = DB.chargeTemplates.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('mch-desc').value = t.name;
+  if (t.price) {
+    document.getElementById('mch-amount').value = t.price;
+    updateVatPreview();
+  }
+}
+
+
+dbLoad();
+renderDashboard();
+renderCalendar();
+updateBadge();
+// sync from cloud
+setTimeout(cloudLoad, 800);
+</script>
+</body>
+</html>
